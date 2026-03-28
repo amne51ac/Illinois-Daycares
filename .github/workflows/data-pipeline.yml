@@ -1,0 +1,98 @@
+name: Data pipeline
+
+# Job 1 (optional): Playwright fetch + normalize CSV. Job 2: geocode → providers.json + api mirror.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_fetch:
+        description: "Run full IL Sunshine scrape (slow; may approach CI time limits)"
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - "Daycare Providers.csv"
+      - "build_data.py"
+      - "requirements.txt"
+      - "normalize_sunshine_csv.py"
+      - "fetch_il_daycare_by_county.py"
+      - ".github/workflows/data-pipeline.yml"
+  schedule:
+    - cron: "0 10 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    name: Fetch Sunshine CSV
+    if: github.event_name == 'workflow_dispatch' && inputs.run_fetch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install fetch dependencies
+        run: |
+          pip install playwright requests
+
+      - name: Install Chromium
+        run: playwright install chromium --with-deps
+
+      - name: Scrape and normalize
+        run: |
+          python fetch_il_daycare_by_county.py --all --out-dir ./sunshine_out --headless
+          python normalize_sunshine_csv.py --in ./sunshine_out/all_counties.csv --out "Daycare Providers.csv"
+
+      - name: Upload CSV artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daycare-csv
+          path: Daycare Providers.csv
+
+  geocode:
+    name: Geocode and commit JSON
+    needs: [fetch]
+    if: ${{ !failure() && !cancelled() && (needs.fetch.result == 'success' || needs.fetch.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download refreshed CSV
+        if: needs.fetch.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: daycare-csv
+          path: .
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build providers.json
+        run: python build_data.py
+
+      - name: Commit data artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add providers.json geocode_cache.json api/v1/providers.json
+          if [ -f "Daycare Providers.csv" ]; then git add "Daycare Providers.csv"; fi
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "chore: regenerate providers.json from CSV"
+            git push
+          fi

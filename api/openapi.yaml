@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Illinois Daycares public data API
+  description: |
+    Static JSON endpoints served from GitHub Pages. There is no server-side query language;
+    consumers load the dataset and filter client-side. Data is derived from public Illinois DCFS
+    licensing listings and geocoding as described on the site.
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://illinoisdaycares.com/LICENSE
+servers:
+  - url: https://illinoisdaycares.com
+    description: Production
+paths:
+  /api/v1/providers.json:
+    get:
+      summary: List all providers
+      description: |
+        Returns a JSON array of provider objects. The same file is available at `/providers.json`
+        for backward compatibility; prefer `/api/v1/providers.json` for integrations.
+      responses:
+        "200":
+          description: Array of providers
+          content:
+            application/json:
+              schema:
+                type: array
+                description: See /api/v1/provider.schema.json for the shape of each element.
+                items:
+                  type: object
+  /api/v1/provider.schema.json:
+    get:
+      summary: JSON Schema for one provider object
+      responses:
+        "200":
+          description: JSON Schema (draft 2020-12)
+          content:
+            application/schema+json:
+              schema:
+                type: object

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Illinois Daycares — Licensed child care map</title>
+  <meta name="description" content="Explore licensed Illinois child care providers on an interactive map. Search by name, filter by facility type, and measure distance from your address." />
+  <link rel="canonical" href="https://illinoisdaycares.com/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://illinoisdaycares.com/" />
+  <meta property="og:title" content="Illinois Daycares — Licensed child care map" />
+  <meta property="og:description" content="Explore licensed Illinois child care providers on an interactive map. Search, filter, and find care near you." />
+  <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <meta property="og:site_name" content="Illinois Daycares" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Illinois Daycares — Licensed child care map" />
+  <meta name="twitter:description" content="Explore licensed Illinois child care providers on an interactive map." />
+  <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <meta name="theme-color" content="#0f1419" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebSite","name":"Illinois Daycares","url":"https://illinoisdaycares.com/","description":"Interactive map of licensed Illinois child care providers from public DCFS licensing data."}
+  </script>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/site.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <a class="skip-link" href="#map">Skip to map</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Illinois Daycares home">
+      <img src="/assets/logo.svg" width="160" height="40" alt="" />
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/" aria-current="page">Map</a>
+      <a href="/about.html">About</a>
+      <a href="/api.html">API</a>
+    </nav>
+  </header>
+  <div id="loading" class="loading-overlay">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Loading providers…</p>
+  </div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="intro">
+        <h1>Illinois daycare providers</h1>
+        <p class="sub"><strong id="intro-count">—</strong> licensed locations from <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx">DCFS Sunshine provider lookup</a> data. Pins use street addresses geocoded with the <a href="https://geocoding.geo.census.gov/">U.S. Census Geocoder</a> (a few unmatched addresses fall back to ZIP-level placement).</p>
+      </div>
+      <details class="filters-wrap" id="filters-panel">
+        <summary>Filters &amp; search</summary>
+        <div class="filters">
+          <div>
+            <label for="q">Search</label>
+            <input type="search" id="q" placeholder="Name, street, phone, zip…" autocomplete="off" />
+          </div>
+          <fieldset class="filter-fieldset">
+            <legend>Your address</legend>
+            <div class="addr-row">
+              <input type="text" id="user-address" placeholder="e.g. 123 N State St, Chicago, IL 60601" autocomplete="street-address" />
+              <button type="button" class="primary" id="btn-place-addr">Place on map</button>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btn-my-location">Use my location</button>
+              <button type="button" class="danger" id="btn-clear-location" disabled>Clear my pin</button>
+            </div>
+            <p class="geo-hint">Shows a <strong style="color: var(--danger);">red pin</strong> for you. Distances are straight-line (not driving). Geocoding tries the Census API, then OpenStreetMap if needed.</p>
+            <p class="geo-error" id="geo-error" hidden></p>
+            <div class="checks" style="margin-top: 0.5rem;">
+              <label class="inline"><input type="checkbox" id="show-rings" disabled /> Show 1 / 3 / 5 mi rings</label>
+            </div>
+            <div class="max-dist-row">
+              <label for="max-dist" style="margin: 0; text-transform: none; letter-spacing: normal;">Max distance</label>
+              <input type="number" id="max-dist" min="0" step="0.25" placeholder="∞" disabled title="Miles from your pin; leave empty for no limit" />
+              <span style="font-size: 0.78rem; color: var(--muted);">mi from pin</span>
+            </div>
+          </fieldset>
+          <fieldset class="filter-fieldset">
+            <legend>Sort list by</legend>
+            <div class="radio-col" id="sort-radios">
+              <label class="inline sort-dist" data-sort-dist="1"><input type="radio" name="sort" value="dist-asc" disabled /> Distance (nearest first)</label>
+              <label class="inline sort-dist" data-sort-dist="1"><input type="radio" name="sort" value="dist-desc" disabled /> Distance (farthest first)</label>
+              <label class="inline"><input type="radio" name="sort" value="name-asc" checked /> Name (A–Z)</label>
+              <label class="inline"><input type="radio" name="sort" value="name-desc" /> Name (Z–A)</label>
+              <label class="inline"><input type="radio" name="sort" value="day-desc" /> Day capacity (high → low)</label>
+              <label class="inline"><input type="radio" name="sort" value="day-asc" /> Day capacity (low → high)</label>
+              <label class="inline"><input type="radio" name="sort" value="zip-asc" /> Zip (low → high)</label>
+            </div>
+          </fieldset>
+          <div>
+            <label>Facility types <span style="color: var(--muted); font-weight: normal; text-transform: none; letter-spacing: normal;">(any checked)</span></label>
+            <div class="checks" id="ftype-filters">
+              <label class="inline"><input type="checkbox" name="ft" value="DCC" checked /> Day care center (DCC)</label>
+              <label class="inline"><input type="checkbox" name="ft" value="DCH" checked /> Day care home (DCH)</label>
+              <label class="inline"><input type="checkbox" name="ft" value="GDC" checked /> Group day care (GDC)</label>
+            </div>
+          </div>
+          <div>
+            <label>License status</label>
+            <div class="checks" id="status-filters">
+              <label class="inline"><input type="checkbox" name="st" value="licensed" checked /> Licensed</label>
+              <label class="inline"><input type="checkbox" name="st" value="pending" checked /> Pending renewal</label>
+              <label class="inline"><input type="checkbox" name="st" value="other" checked /> Other</label>
+            </div>
+          </div>
+          <div>
+            <label>Options</label>
+            <div class="checks">
+              <label class="inline"><input type="checkbox" id="night-only" /> Night capacity &gt; 0</label>
+            </div>
+          </div>
+        </div>
+      </details>
+      <div class="meta-bar">
+        <span id="count">0 shown</span>
+        <button type="button" id="fit-bounds">Fit map to results</button>
+      </div>
+      <div class="list-wrap">
+        <div class="list" id="list" role="listbox" aria-label="Providers"></div>
+      </div>
+    </aside>
+    <main id="map" role="application" aria-label="Map of daycare providers"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    (function () {
+      const FT_LABEL = { DCC: "Day care center", DCH: "Day care home", GDC: "Group day care home" };
+
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s == null ? "" : String(s);
+        return d.innerHTML;
+      }
+
+      function formatPhone(p) {
+        const d = String(p).replace(/\D/g, "");
+        if (d.length === 10) return "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6);
+        return p || "—";
+      }
+
+      function statusBucket(status) {
+        if (/License issued/i.test(status)) return "licensed";
+        if (/Pending renewal/i.test(status)) return "pending";
+        return "other";
+      }
+
+      let raw = [];
+      let filtered = [];
+      let selectedId = null;
+      let map;
+      let markerLayer;
+      let userLayer;
+      /** @type {{ lat: number, lon: number, label: string } | null} */
+      let userPoint = null;
+      const markersById = {};
+
+      const RED_ICON = L.icon({
+        iconUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-red.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+        shadowAnchor: [12, 41],
+      });
+
+      function haversineMiles(lat1, lon1, lat2, lon2) {
+        const R = 3958.7613;
+        const toRad = function (d) {
+          return (d * Math.PI) / 180;
+        };
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      function distanceMi(p) {
+        if (!userPoint) return null;
+        return haversineMiles(userPoint.lat, userPoint.lon, p.lat, p.lon);
+      }
+
+      function formatMi(m) {
+        if (m == null || isNaN(m)) return "";
+        return (Math.round(m * 10) / 10).toFixed(1) + " mi";
+      }
+
+      function sortData(arr, key) {
+        const copy = arr.slice();
+        const effectiveKey =
+          (key === "dist-asc" || key === "dist-desc") && !userPoint ? "name-asc" : key;
+        switch (effectiveKey) {
+          case "dist-asc":
+            return copy.sort(function (a, b) {
+              return distanceMi(a) - distanceMi(b) || a.name.localeCompare(b.name);
+            });
+          case "dist-desc":
+            return copy.sort(function (a, b) {
+              return distanceMi(b) - distanceMi(a) || a.name.localeCompare(b.name);
+            });
+          case "name-desc":
+            return copy.sort((a, b) => b.name.localeCompare(a.name, undefined, { sensitivity: "base" }));
+          case "day-desc":
+            return copy.sort((a, b) => b.dayCap - a.dayCap || a.name.localeCompare(b.name));
+          case "day-asc":
+            return copy.sort((a, b) => a.dayCap - b.dayCap || a.name.localeCompare(b.name));
+          case "zip-asc":
+            return copy.sort((a, b) => a.zip.localeCompare(b.zip) || a.name.localeCompare(b.name));
+          case "name-asc":
+          default:
+            return copy.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+        }
+      }
+
+      function getSortValue() {
+        const el = document.querySelector('#sort-radios input[name="sort"]:checked');
+        return el ? el.value : "name-asc";
+      }
+
+      function getSelectedFacilityTypes() {
+        const selected = [];
+        document.querySelectorAll('#ftype-filters input[type="checkbox"]:checked').forEach(function (cb) {
+          selected.push(cb.value);
+        });
+        if (selected.length === 0) return ["DCC", "DCH", "GDC"];
+        return selected;
+      }
+
+      function passesFilters(p) {
+        const q = document.getElementById("q").value.trim().toLowerCase();
+        if (q) {
+          const blob = [p.name, p.street, p.zip, p.phone, p.id].join(" ").toLowerCase();
+          if (!blob.includes(q)) return false;
+        }
+        if (!getSelectedFacilityTypes().includes(p.facilityType)) return false;
+        const buckets = {};
+        document.querySelectorAll('#status-filters input[type="checkbox"]').forEach((cb) => {
+          buckets[cb.value] = cb.checked;
+        });
+        const b = statusBucket(p.status);
+        if (!buckets[b]) return false;
+        if (document.getElementById("night-only").checked && !(p.nightCap > 0)) return false;
+        if (userPoint) {
+          const maxEl = document.getElementById("max-dist");
+          const v = parseFloat(maxEl.value);
+          if (!isNaN(v) && v > 0) {
+            const d = distanceMi(p);
+            if (d != null && d > v) return false;
+          }
+        }
+        return true;
+      }
+
+      function popupHtml(p) {
+        const phone = formatPhone(p.phone);
+        const tel = String(p.phone).replace(/\D/g, "");
+        const phoneLine =
+          tel.length >= 10
+            ? '<a href="tel:' + tel + '">' + escapeHtml(phone) + "</a>"
+            : escapeHtml(phone);
+        return (
+          '<div class="popup-inner">' +
+          "<h3>" +
+          escapeHtml(p.name) +
+          "</h3>" +
+          "<dl>" +
+          "<dt>Address</dt><dd>" +
+          escapeHtml(p.street) +
+          ", " +
+          escapeHtml(p.city) +
+          " " +
+          escapeHtml(p.zip) +
+          "</dd>" +
+          "<dt>Phone</dt><dd>" +
+          phoneLine +
+          "</dd>" +
+          "<dt>Type</dt><dd>" +
+          escapeHtml(FT_LABEL[p.facilityType] || p.facilityType) +
+          " (" +
+          escapeHtml(p.facilityType) +
+          ")</dd>" +
+          "<dt>Day / night capacity</dt><dd>" +
+          p.dayCap +
+          " / " +
+          p.nightCap +
+          "</dd>" +
+          "<dt>Day age range</dt><dd>" +
+          escapeHtml((p.dayAge || "").trim()) +
+          "</dd>" +
+          (function () {
+            var na = (p.nightAge || "").trim();
+            if (!na || /^0\s*$/i.test(na)) return "";
+            return "<dt>Night age range</dt><dd>" + escapeHtml(na) + "</dd>";
+          })() +
+          "<dt>Status</dt><dd>" +
+          escapeHtml(p.status) +
+          "</dd>" +
+          "<dt>Language</dt><dd>" +
+          escapeHtml(p.lang1 || "—") +
+          "</dd>" +
+          (function () {
+            var d = distanceMi(p);
+            if (d == null) return "";
+            return (
+              "<dt>Distance from your pin</dt><dd>" +
+              formatMi(d) +
+              " <span style=\"color:#8b9cb3\">(straight line)</span></dd>"
+            );
+          })() +
+          "</dl></div>"
+        );
+      }
+
+      function refreshAllPopups() {
+        Object.keys(markersById).forEach(function (id) {
+          const p = raw.find(function (x) {
+            return x.id === id;
+          });
+          if (p) markersById[id].setPopupContent(popupHtml(p));
+        });
+      }
+
+      function selectProvider(id, fromMarker) {
+        selectedId = id;
+        document.querySelectorAll(".card").forEach((el) => {
+          const on = el.dataset.id === id;
+          el.classList.toggle("selected", on);
+          el.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        const m = markersById[id];
+        if (!m) return;
+        if (!fromMarker) {
+          map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+        }
+        m.openPopup();
+        const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
+        if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+
+      function renderList() {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        const sortKey = getSortValue();
+        filtered = sortData(raw.filter(passesFilters), sortKey);
+        document.getElementById("count").textContent = filtered.length + " shown";
+
+        const frag = document.createDocumentFragment();
+        filtered.forEach((p) => {
+          const div = document.createElement("div");
+          div.className = "card" + (p.id === selectedId ? " selected" : "");
+          div.dataset.id = p.id;
+          div.setAttribute("role", "option");
+          div.setAttribute("aria-selected", p.id === selectedId ? "true" : "false");
+          div.innerHTML =
+            '<div class="name">' +
+            escapeHtml(p.name) +
+            '</div><div class="line">' +
+            escapeHtml(p.street) +
+            " · " +
+            escapeHtml(p.zip) +
+            '</div><div class="line">' +
+            escapeHtml(formatPhone(p.phone)) +
+            ' · day cap ' +
+            p.dayCap +
+            (function () {
+              var d = distanceMi(p);
+              if (d == null) return "";
+              return ' · <span style="color:var(--accent)">' + formatMi(d) + "</span>";
+            })() +
+            '</div><span class="badge">' +
+            escapeHtml(FT_LABEL[p.facilityType] || p.facilityType) +
+            "</span>";
+          div.addEventListener("click", () => selectProvider(p.id, false));
+          frag.appendChild(div);
+        });
+        list.appendChild(frag);
+        refreshMarkers();
+      }
+
+      function refreshMarkers() {
+        const visible = new Set(filtered.map((p) => p.id));
+        markerLayer.clearLayers();
+        Object.keys(markersById).forEach((id) => {
+          if (visible.has(id)) markerLayer.addLayer(markersById[id]);
+        });
+        if (selectedId && !visible.has(selectedId)) {
+          selectedId = null;
+          document.querySelectorAll(".card.selected").forEach((el) => el.classList.remove("selected"));
+        }
+      }
+
+      /** Illinois state bounds (southwest, northeast) for default map view. */
+      const ILLINOIS_BOUNDS = L.latLngBounds([36.96, -91.52], [42.51, -87.02]);
+
+      function fitIllinois() {
+        map.fitBounds(ILLINOIS_BOUNDS, { padding: [18, 18], maxZoom: 8 });
+      }
+
+      function fitToVisible() {
+        const layers = [];
+        filtered.forEach((p) => {
+          if (markersById[p.id]) layers.push(markersById[p.id]);
+        });
+        if (!layers.length) return;
+        const fg = L.featureGroup(layers);
+        map.fitBounds(fg.getBounds().pad(0.08), { maxZoom: 14 });
+      }
+
+      function showGeoError(msg) {
+        const el = document.getElementById("geo-error");
+        el.textContent = msg;
+        el.hidden = false;
+      }
+
+      function hideGeoError() {
+        const el = document.getElementById("geo-error");
+        el.textContent = "";
+        el.hidden = true;
+      }
+
+      function drawUserLayer() {
+        userLayer.clearLayers();
+        if (!userPoint) return;
+        const latlng = [userPoint.lat, userPoint.lon];
+        if (document.getElementById("show-rings").checked) {
+          [
+            { mi: 1, color: "#e07a7a" },
+            { mi: 3, color: "#c9a227" },
+            { mi: 5, color: "#5b8fd8" },
+          ].forEach(function (ring) {
+            L.circle(latlng, {
+              radius: ring.mi * 1609.34,
+              color: ring.color,
+              weight: 2,
+              opacity: 0.85,
+              fill: false,
+            }).addTo(userLayer);
+          });
+        }
+        L.marker(latlng, { icon: RED_ICON, zIndexOffset: 1000 })
+          .bindPopup(
+            '<div class="popup-inner"><h3>Your location</h3><p style="margin:0;font-size:0.85rem">' +
+              escapeHtml(userPoint.label) +
+              "</p></div>",
+            { maxWidth: 280 }
+          )
+          .addTo(userLayer);
+      }
+
+      function updateDistanceControls() {
+        const on = !!userPoint;
+        document.querySelectorAll('.sort-dist input[type="radio"]').forEach(function (inp) {
+          inp.disabled = !on;
+        });
+        document.querySelectorAll(".sort-dist").forEach(function (lab) {
+          lab.classList.toggle("sort-off", !on);
+        });
+        document.getElementById("max-dist").disabled = !on;
+        document.getElementById("show-rings").disabled = !on;
+        document.getElementById("btn-clear-location").disabled = !on;
+        if (!on) {
+          document.getElementById("show-rings").checked = false;
+        }
+      }
+
+      function setUserLocation(lat, lon, label) {
+        userPoint = { lat: lat, lon: lon, label: label || "Your location" };
+        updateDistanceControls();
+        drawUserLayer();
+        refreshAllPopups();
+        map.setView([lat, lon], Math.max(map.getZoom(), 13), { animate: true });
+        renderList();
+        hideGeoError();
+      }
+
+      function clearUserLocation() {
+        userPoint = null;
+        userLayer.clearLayers();
+        updateDistanceControls();
+        const distSort = document.querySelector('#sort-radios input[name="sort"]:checked');
+        if (distSort && (distSort.value === "dist-asc" || distSort.value === "dist-desc")) {
+          document.querySelector('#sort-radios input[name="sort"][value="name-asc"]').checked = true;
+        }
+        document.getElementById("max-dist").value = "";
+        refreshAllPopups();
+        renderList();
+        hideGeoError();
+      }
+
+      async function geocodeAddressText(query) {
+        const q = query.trim();
+        if (!q) return null;
+        const params = new URLSearchParams({ address: q, benchmark: "2020", format: "json" });
+        try {
+          const url = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?" + params.toString();
+          const r = await fetch(url);
+          if (r.ok) {
+            const d = await r.json();
+            const m = d.result && d.result.addressMatches && d.result.addressMatches[0];
+            if (m && m.coordinates) {
+              const c = m.coordinates;
+              return {
+                lat: parseFloat(c.y),
+                lon: parseFloat(c.x),
+                label: m.matchedAddress || q,
+              };
+            }
+          }
+        } catch (e) {
+          /* Census may be unavailable or block cross-origin requests */
+        }
+        const nParams = new URLSearchParams({
+          format: "json",
+          q: q,
+          limit: "1",
+          countrycodes: "us",
+        });
+        const r2 = await fetch("https://nominatim.openstreetmap.org/search?" + nParams.toString(), {
+          headers: { "Accept-Language": "en" },
+        });
+        if (!r2.ok) return null;
+        const arr = await r2.json();
+        if (arr && arr[0]) {
+          return {
+            lat: parseFloat(arr[0].lat),
+            lon: parseFloat(arr[0].lon),
+            label: arr[0].display_name,
+          };
+        }
+        return null;
+      }
+
+      function wireLocation() {
+        document.getElementById("btn-place-addr").addEventListener("click", async function () {
+          hideGeoError();
+          const text = document.getElementById("user-address").value.trim();
+          if (!text) {
+            showGeoError("Enter an address first.");
+            return;
+          }
+          const btn = document.getElementById("btn-place-addr");
+          btn.disabled = true;
+          try {
+            const res = await geocodeAddressText(text);
+            if (!res) {
+              showGeoError("Could not find that address. Try including city and ZIP.");
+              return;
+            }
+            setUserLocation(res.lat, res.lon, res.label);
+          } catch (e) {
+            showGeoError("Geocoding failed. Check your connection and try again.");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+        document.getElementById("btn-my-location").addEventListener("click", function () {
+          hideGeoError();
+          if (!navigator.geolocation) {
+            showGeoError("Your browser does not support geolocation.");
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              setUserLocation(pos.coords.latitude, pos.coords.longitude, "Your current location");
+            },
+            function () {
+              showGeoError("Could not read your location (permission or unavailable).");
+            },
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
+          );
+        });
+        document.getElementById("btn-clear-location").addEventListener("click", clearUserLocation);
+        document.getElementById("show-rings").addEventListener("change", function () {
+          if (userPoint) drawUserLayer();
+        });
+        document.getElementById("max-dist").addEventListener("input", debounce(renderList, 200));
+        document.getElementById("user-address").addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            document.getElementById("btn-place-addr").click();
+          }
+        });
+      }
+
+      function initMap() {
+        map = L.map("map", { scrollWheelZoom: true });
+
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19,
+        });
+        const voyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
+          maxZoom: 20,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        });
+        const positron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
+          maxZoom: 20,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        });
+        const darkMatter = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          subdomains: "abcd",
+          maxZoom: 20,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        });
+        const natGeo = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 16,
+            attribution:
+              "Tiles &copy; Esri &mdash; Source: National Geographic, Esri, Garmin, HERE, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, increment P Corp.",
+          }
+        );
+        const worldTopo = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 19,
+            attribution: "Tiles &copy; Esri &mdash; Source: Esri, HERE, Garmin, FAO, NOAA, USGS, EPA, NPS, USGS, USDA",
+          }
+        );
+        const openTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+          subdomains: "abc",
+          maxZoom: 17,
+          attribution:
+            'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+        });
+        const esriSat = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 19,
+            attribution:
+              "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+          }
+        );
+        const esriTransport = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 19,
+            attribution: "Transportation overlay &copy; Esri",
+          }
+        );
+        const esriLabels = L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+          {
+            maxZoom: 19,
+            attribution: "Labels &copy; Esri",
+          }
+        );
+        const hybrid = L.layerGroup([esriSat, esriTransport, esriLabels]);
+
+        const baseLayers = {
+          "OpenStreetMap": osm,
+          "Voyager (CARTO)": voyager,
+          "Light (CARTO)": positron,
+          "Dark (CARTO)": darkMatter,
+          "National Geographic (Esri)": natGeo,
+          "World Topo (Esri)": worldTopo,
+          "OpenTopoMap (terrain)": openTopo,
+          "Satellite (Esri)": esriSat,
+          "Satellite + streets (Esri)": hybrid,
+        };
+        osm.addTo(map);
+        L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+
+        markerLayer = L.layerGroup();
+        map.addLayer(markerLayer);
+        userLayer = L.layerGroup();
+        map.addLayer(userLayer);
+
+        raw.forEach((p) => {
+          const m = L.marker([p.lat, p.lon], { title: p.name });
+          m.bindPopup(popupHtml(p), { maxWidth: 340 });
+          m.on("click", () => {
+            selectProvider(p.id, true);
+          });
+          markersById[p.id] = m;
+        });
+
+        updateDistanceControls();
+        renderList();
+        fitIllinois();
+
+        document.getElementById("fit-bounds").addEventListener("click", fitToVisible);
+        wireLocation();
+      }
+
+      function wireFilters() {
+        const rerender = () => renderList();
+        document.getElementById("q").addEventListener("input", debounce(rerender, 200));
+        document.querySelectorAll('#sort-radios input[name="sort"]').forEach((el) => el.addEventListener("change", rerender));
+        document.querySelectorAll("#ftype-filters input").forEach((el) => el.addEventListener("change", rerender));
+        document.getElementById("night-only").addEventListener("change", rerender);
+        document.querySelectorAll('#status-filters input').forEach((el) => el.addEventListener("change", rerender));
+      }
+
+      function debounce(fn, ms) {
+        let t;
+        return function () {
+          clearTimeout(t);
+          t = setTimeout(() => fn.apply(this, arguments), ms);
+        };
+      }
+
+      fetch("/api/v1/providers.json")
+        .then(function (r) {
+          if (r.ok) return r.json();
+          return fetch("providers.json").then(function (r2) {
+            if (!r2.ok) throw new Error("Could not load provider data");
+            return r2.json();
+          });
+        })
+        .then((data) => {
+          raw = data;
+          const ic = document.getElementById("intro-count");
+          if (ic) ic.textContent = raw.length.toLocaleString();
+          document.getElementById("loading").classList.add("hidden");
+          initMap();
+          wireFilters();
+        })
+        .catch((e) => {
+          document.getElementById("loading").innerHTML =
+            "<p>Failed to load data. Run <code>python3 build_data.py</code> to build <code>providers.json</code> and <code>api/v1/providers.json</code>.</p><p>" +
+            escapeHtml(e.message) +
+            "</p>";
+        });
+    })();
+  </script>
+</body>
+</html>

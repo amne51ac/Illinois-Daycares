@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About — Illinois Daycares</title>
+  <meta name="description" content="How Illinois Daycares is built, where data comes from, and important disclaimers." />
+  <link rel="canonical" href="https://illinoisdaycares.com/about.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://illinoisdaycares.com/about.html" />
+  <meta property="og:title" content="About — Illinois Daycares" />
+  <meta property="og:description" content="Data sources, methodology, and disclaimers for the Illinois Daycares map." />
+  <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="About — Illinois Daycares" />
+  <meta name="twitter:description" content="Data sources, methodology, and disclaimers for the Illinois Daycares map." />
+  <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/site.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Illinois Daycares home">
+      <img src="/assets/logo.svg" width="160" height="40" alt="" />
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/">Map</a>
+      <a href="/about.html" aria-current="page">About</a>
+      <a href="/api.html">API</a>
+    </nav>
+  </header>
+  <main id="main" class="prose">
+    <h1>About Illinois Daycares</h1>
+    <p>
+      <strong>Illinois Daycares</strong> is an independent map of licensed child care providers published from public
+      Illinois Department of Children &amp; Family Services (DCFS) licensing data. It is designed to help families
+      explore providers by location, facility type, and other fields available in the source listings.
+    </p>
+    <h2>Data sources</h2>
+    <ul>
+      <li>
+        Provider listings originate from the state&rsquo;s public tools, including the
+        <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx">DCFS Sunshine provider lookup</a>.
+        A helper script in this repository can export results by county; those exports are normalized into a CSV that
+        feeds the geocoding build.
+      </li>
+      <li>
+        Street-level coordinates are resolved with the
+        <a href="https://geocoding.geo.census.gov/">U.S. Census Bureau Geocoder</a> where possible. Addresses that do
+        not match are placed near the center of the ZIP code with a small deterministic offset so nearby points remain
+        distinguishable.
+      </li>
+    </ul>
+    <h2>Map layers</h2>
+    <p class="muted">
+      Base maps may include &copy; OpenStreetMap, &copy; CARTO, Esri, and OpenTopoMap contributors (see on-map
+      attributions). &ldquo;Satellite + streets&rdquo; overlays imagery with roads and labels for context.
+    </p>
+    <h2>Disclaimer</h2>
+    <p>
+      This site is not affiliated with DCFS or any provider. Information may be incomplete or out of date. Pins and
+      distances are for exploration only and are not legal, medical, or enrollment advice. Always verify licenses and
+      visit programs in person before making care decisions.
+    </p>
+    <h2>Open source</h2>
+    <p>
+      Source code is available under the MIT License. See the repository README for how to run the data build locally
+      and deploy to GitHub Pages.
+    </p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://illinoisdaycares.com/api/v1/provider.schema.json",
+  "title": "Daycare provider",
+  "description": "Single licensed provider record from Illinois Daycares public data.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "description": "Stable provider identifier from source data or derived key." },
+    "name": { "type": "string" },
+    "street": { "type": "string" },
+    "city": { "type": "string" },
+    "zip": { "type": "string" },
+    "phone": { "type": "string" },
+    "facilityType": { "type": "string", "enum": ["DCC", "DCH", "GDC"] },
+    "dayAge": { "type": "string" },
+    "nightAge": { "type": "string" },
+    "lang1": { "type": "string" },
+    "dayCap": { "type": "integer", "minimum": 0 },
+    "nightCap": { "type": "integer", "minimum": 0 },
+    "status": { "type": "string" },
+    "lat": { "type": "number" },
+    "lon": { "type": "number" }
+  },
+  "required": ["id", "name", "street", "city", "zip", "lat", "lon", "facilityType", "dayCap", "nightCap", "status"]
+}

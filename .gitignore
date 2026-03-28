@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+.env
+.DS_Store
+sunshine_out/
+sunshine_county_exports/
+playwright-report/
