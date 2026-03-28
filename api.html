@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>API — Illinois Daycares</title>
-  <meta name="description" content="Public JSON API for Illinois licensed child care provider data used by Illinois Daycares." />
+  <title>API — IllinoisDaycares.com</title>
+  <meta name="description" content="JSON download of all Illinois licensed daycare providers for IllinoisDaycares.com—the searchable, filterable map backed by DCFS Sunshine data." />
   <link rel="canonical" href="https://illinoisdaycares.com/api.html" />
   <meta property="og:url" content="https://illinoisdaycares.com/api.html" />
-  <meta property="og:title" content="API — Illinois Daycares" />
-  <meta property="og:description" content="Static JSON endpoints and schema for Illinois daycare provider data." />
+  <meta property="og:title" content="API — IllinoisDaycares.com" />
+  <meta property="og:description" content="Static JSON and schema for Illinois licensed daycare providers—the same dataset that powers IllinoisDaycares.com." />
   <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="API — IllinoisDaycares.com" />
+  <meta name="twitter:description" content="Static JSON of Illinois licensed daycare providers—the dataset behind the IllinoisDaycares.com map." />
+  <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image.png" />
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,8 +23,8 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="Illinois Daycares home">
-      <img src="/assets/logo.svg" width="160" height="40" alt="" />
+    <a class="brand" href="/" aria-label="IllinoisDaycares.com home">
+      <img src="/assets/logo.svg" width="248" height="36" alt="" />
     </a>
     <nav class="site-nav" aria-label="Primary">
       <a href="/">Map</a>
@@ -36,8 +39,9 @@
   <main id="main" class="prose">
     <h1>Public data API</h1>
     <p>
-      Illinois Daycares is a <strong>static site</strong>. The &ldquo;API&rdquo; is a versioned JSON file you can fetch over HTTPS.
-      There are no query parameters or server-side filters: download the dataset and filter in your app, notebook, or script.
+      The live site is a <strong>searchable, filterable, shareable map</strong> of licensed Illinois daycare providers; this
+      page documents the static <strong>JSON</strong> you can fetch over HTTPS to use the same dataset in your own app,
+      notebook, or script. There are no query parameters or server-side filters—download the file and filter client-side.
     </p>
     <h2>Endpoints</h2>
     <ul>
@@ -81,12 +85,13 @@
     </ul>
   </main>
   <footer class="site-footer" role="contentinfo">
-    <p class="site-footer-links">
-      <a href="/privacy.html">Privacy</a>
+    <p class="site-footer-line">
+      <span class="site-footer-legal">
+        <a href="/privacy.html">Privacy</a><span class="site-footer-sep" aria-hidden="true">·</span><a href="/terms.html">Terms</a>
+      </span>
       <span class="site-footer-sep" aria-hidden="true">·</span>
-      <a href="/terms.html">Terms</a>
+      © 2026 <a href="https://github.com/amne51ac" rel="noopener noreferrer" target="_blank" title="Mark Milhouse on GitHub" aria-label="Mark Milhouse on GitHub (opens in new tab)">Mark Milhouse</a>
     </p>
-    <p>© 2026 <a href="https://github.com/amne51ac" rel="noopener noreferrer" target="_blank" title="Mark Milhouse on GitHub" aria-label="Mark Milhouse on GitHub (opens in new tab)">Mark Milhouse</a></p>
   </footer>
 </body>
 </html>

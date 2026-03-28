@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
-  title: Illinois Daycares public data API
+  title: IllinoisDaycares.com public data API
   description: |
-    Static JSON endpoints served from GitHub Pages. There is no server-side query language;
-    consumers load the dataset and filter client-side. Data is derived from public Illinois DCFS
-    licensing listings and geocoding as described on the site.
+    Static JSON for IllinoisDaycares.com—the searchable, filterable map of licensed Illinois daycare
+    providers from DCFS Sunshine data. Served from GitHub Pages with no server-side query language;
+    consumers load the dataset and filter client-side. Geocoding and methodology are described on the site.
   version: 1.0.0
   license:
     name: MIT

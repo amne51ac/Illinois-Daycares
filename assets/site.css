@@ -70,15 +70,18 @@ a:hover { text-decoration: underline; }
   font-size: 1.05rem;
   letter-spacing: -0.02em;
   min-width: 0;
-  flex-shrink: 1;
+  /* Let nav wrap to a second row before squashing the wordmark */
+  flex-shrink: 0;
 }
 .site-header .brand:hover { text-decoration: none; opacity: 0.92; }
 .site-header .brand img {
   display: block;
-  height: 28px;
+  /* SVG viewBox 248×36 — max-width must allow full width at this height or the browser scales both axes down */
+  height: 34px;
   width: auto;
-  max-width: min(160px, 38vw);
+  max-width: min(236px, calc(100vw - 11rem));
   object-fit: contain;
+  flex-shrink: 0;
 }
 .site-nav {
   display: flex;
@@ -130,18 +133,17 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
   word-break: break-word;
 }
-.site-footer-links {
-  margin-bottom: 0.12rem !important;
+.site-footer-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
 }
 .site-footer-sep {
-  margin: 0 0.35rem;
+  margin: 0 0.15rem;
   color: var(--border);
-}
-.site-footer-links a {
-  color: var(--muted);
-}
-.site-footer-links a:hover {
-  color: var(--accent);
+  user-select: none;
 }
 .site-footer a {
   color: var(--text);
@@ -150,6 +152,33 @@ a:hover { text-decoration: underline; }
 .site-footer a:hover {
   color: var(--accent);
   text-decoration: underline;
+}
+.site-footer-legal a {
+  color: var(--muted);
+}
+.site-footer-legal a:hover {
+  color: var(--accent);
+}
+
+/* Prose pages (About, API, Privacy, Terms): header/footer stay visible; main scrolls */
+body:has(> main.prose) {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+body:has(> main.prose) > .site-header {
+  flex-shrink: 0;
+  background: var(--panel);
+}
+body:has(> main.prose) > main.prose {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body:has(> main.prose) > .site-footer {
+  flex-shrink: 0;
 }
 
 .app {
@@ -174,8 +203,8 @@ a:hover { text-decoration: underline; }
     row-gap: 0.45rem;
   }
   .site-header .brand img {
-    height: 24px;
-    max-width: min(150px, 52vw);
+    height: 30px;
+    max-width: min(220px, calc(100vw - 2.5rem));
   }
   .site-nav {
     font-size: 0.78rem;
@@ -280,6 +309,13 @@ a:hover { text-decoration: underline; }
   line-height: 1.45;
   margin: 0;
 }
+.sidebar .intro .sub + .sub {
+  margin-top: 0.55rem;
+}
+.sidebar .intro time {
+  font-weight: 500;
+  color: var(--text);
+}
 
 .filters-wrap {
   border-bottom: 1px solid var(--border);
@@ -317,6 +353,15 @@ a:hover { text-decoration: underline; }
 .filters-wrap > summary:hover { color: var(--text); }
 .favorites-accordion-body {
   padding: 0 1.1rem 0.85rem;
+}
+/* Desktop sidebar does not scroll; cap favorites height so list is scrollable */
+@media (min-width: 901px) {
+  .favorites-accordion[open] .favorites-accordion-body {
+    max-height: min(42vh, 22rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 .favorites-empty {
   margin: 0;

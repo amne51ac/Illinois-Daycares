@@ -1,6 +1,6 @@
-# Illinois Daycares
+# IllinoisDaycares.com
 
-Public, static map of **licensed Illinois child care providers** built from state licensing data. Explore providers on a Leaflet map, search and filter in the sidebar, and optionally drop a pin to sort by distance.
+**Searchable, filterable, shareable** static map of **licensed Illinois daycare providers** from DCFS Sunshine data—built to find care in our neighborhood, shared for everyone. Explore on a Leaflet map, copy share links, and optionally drop a pin to sort by distance. JSON downloads for developers: see `api.html` on the site.
 
 **Live site:** [illinoisdaycares.com](https://illinoisdaycares.com/) (configure DNS + GitHub Pages as below).
 
@@ -53,7 +53,7 @@ The map tries `/api/v1/providers.json` first, then falls back to `providers.json
 |------|----------------|
 | `build_data.py` | Geocodes a normalized CSV via the [U.S. Census Geocoder](https://geocoding.geo.census.gov/), caches in `geocode_cache.json`, writes compact `providers.json` and mirrors it to `api/v1/providers.json`. |
 | `fetch_il_daycare_by_county.py` | Optional: Playwright scrape of the [DCFS Sunshine provider lookup](https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx) by county (slow; respect the site). |
-| `normalize_sunshine_csv.py` | Converts combined Sunshine CSV into `Daycare Providers.csv` format for the build. |
+| `normalize_sunshine_csv.py` | Converts a Sunshine export into the normalized CSV column layout consumed by `build_data.py`. |
 
 ### GitHub Actions
 

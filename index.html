@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Illinois Daycares — Licensed child care map</title>
-  <meta name="description" content="Explore licensed Illinois child care providers on an interactive map. Search by name, filter by facility type, and measure distance from your address." />
+  <title>IllinoisDaycares.com — Searchable Illinois daycare map</title>
+  <meta name="description" content="Searchable, filterable, shareable map of licensed Illinois daycare providers from DCFS Sunshine data. Built to find care in our neighborhood—we hope it helps you too. Counts and export dates update with each data refresh." />
   <link rel="canonical" href="https://illinoisdaycares.com/" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://illinoisdaycares.com/" />
-  <meta property="og:title" content="Illinois Daycares — Licensed child care map" />
-  <meta property="og:description" content="Explore licensed Illinois child care providers on an interactive map. Search, filter, and find care near you." />
+  <meta property="og:title" content="IllinoisDaycares.com — Searchable Illinois daycare map" />
+  <meta property="og:description" content="Searchable, filterable, shareable map of licensed Illinois daycare providers from DCFS Sunshine data. Built to find care in our neighborhood—we hope it helps you too." />
   <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image.png" />
-  <meta property="og:site_name" content="Illinois Daycares" />
+  <meta property="og:site_name" content="IllinoisDaycares.com" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Illinois Daycares — Licensed child care map" />
-  <meta name="twitter:description" content="Explore licensed Illinois child care providers on an interactive map." />
+  <meta name="twitter:title" content="IllinoisDaycares.com — Searchable Illinois daycare map" />
+  <meta name="twitter:description" content="Searchable, filterable, shareable map of licensed Illinois daycare providers from DCFS Sunshine data. Built to find care in our neighborhood—we hope it helps you too." />
   <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image.png" />
   <meta name="theme-color" content="#0f1419" />
-  <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"WebSite","name":"Illinois Daycares","url":"https://illinoisdaycares.com/","description":"Interactive map of licensed Illinois child care providers from public DCFS licensing data."}
+  <script type="application/ld+json" id="ld-json-home">
+  {"@context":"https://schema.org","@type":"WebSite","name":"IllinoisDaycares.com","url":"https://illinoisdaycares.com/","description":"Searchable, filterable, shareable map of licensed Illinois daycare providers from Illinois DCFS Sunshine licensing data."}
   </script>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/assets/favicon.svg" />
@@ -33,8 +33,8 @@
 <body>
   <a class="skip-link" href="#map">Skip to map</a>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="Illinois Daycares home">
-      <img src="/assets/logo.svg" width="160" height="40" alt="" />
+    <a class="brand" href="/" aria-label="IllinoisDaycares.com home">
+      <img src="/assets/logo.svg" width="248" height="36" alt="" />
     </a>
     <nav class="site-nav" aria-label="Primary">
       <a href="/" aria-current="page">Map</a>
@@ -52,9 +52,17 @@
   </div>
   <div class="app">
     <aside class="sidebar">
-      <div class="intro">
+      <div class="intro" id="map-intro" aria-live="polite">
         <h1>Illinois daycare providers</h1>
-        <p class="sub"><strong id="intro-count">—</strong> licensed locations from <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx">DCFS Sunshine provider lookup</a> data. Pins use street addresses geocoded with the <a href="https://geocoding.geo.census.gov/">U.S. Census Geocoder</a> (a few unmatched addresses fall back to ZIP-level placement).</p>
+        <p class="sub">
+          A searchable, filterable, shareable map of all <strong id="intro-count">—</strong> licensed daycare providers in
+          Illinois as of <time id="intro-export-date">&hellip;</time>, from the
+          <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx">DCFS Sunshine provider lookup</a>.
+        </p>
+        <p class="sub">
+          I made this to make it easier for my wife and I to find daycares in our neighborhood, and I hope you find it
+          useful as well!
+        </p>
       </div>
       <details class="filters-wrap" id="filters-panel">
         <summary>Filters &amp; search</summary>
@@ -162,12 +170,13 @@
     <main id="map" role="application" aria-label="Map of daycare providers"></main>
   </div>
   <footer class="site-footer" role="contentinfo">
-    <p class="site-footer-links">
-      <a href="/privacy.html">Privacy</a>
+    <p class="site-footer-line">
+      <span class="site-footer-legal">
+        <a href="/privacy.html">Privacy</a><span class="site-footer-sep" aria-hidden="true">·</span><a href="/terms.html">Terms</a>
+      </span>
       <span class="site-footer-sep" aria-hidden="true">·</span>
-      <a href="/terms.html">Terms</a>
+      © 2026 <a href="https://github.com/amne51ac" rel="noopener noreferrer" target="_blank" title="Mark Milhouse on GitHub" aria-label="Mark Milhouse on GitHub (opens in new tab)">Mark Milhouse</a>
     </p>
-    <p>© 2026 <a href="https://github.com/amne51ac" rel="noopener noreferrer" target="_blank" title="Mark Milhouse on GitHub" aria-label="Mark Milhouse on GitHub (opens in new tab)">Mark Milhouse</a></p>
   </footer>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
@@ -181,6 +190,47 @@
         const d = document.createElement("div");
         d.textContent = s == null ? "" : String(s);
         return d.innerHTML;
+      }
+
+      /** Sunshine export date as MM/DD/YYYY (UTC calendar date from ISO YYYY-MM-DD). */
+      function formatExportDateUS(iso) {
+        if (!iso || typeof iso !== "string") return "";
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
+        if (m) return m[2] + "/" + m[3] + "/" + m[1];
+        const d = new Date(iso + "T12:00:00Z");
+        if (isNaN(d.getTime())) return "";
+        const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(d.getUTCDate()).padStart(2, "0");
+        return mo + "/" + day + "/" + d.getUTCFullYear();
+      }
+
+      function applyHomeSeoFromData(count, exportedAtIso) {
+        const dateStr = formatExportDateUS(exportedAtIso);
+        const dateSeg = dateStr ? " as of " + dateStr : "";
+        const desc =
+          "A searchable, filterable, shareable map of all " +
+          count.toLocaleString() +
+          " licensed daycare providers in Illinois" +
+          dateSeg +
+          ", from Illinois DCFS Sunshine data. I made it to find daycares in our neighborhood—I hope you find it useful too.";
+        const setContent = function (sel, value) {
+          const el = document.head.querySelector(sel);
+          if (el) el.setAttribute("content", value);
+        };
+        setContent('meta[name="description"]', desc);
+        setContent('meta[property="og:description"]', desc);
+        setContent('meta[name="twitter:description"]', desc);
+        const ld = document.getElementById("ld-json-home");
+        if (ld) {
+          try {
+            const o = JSON.parse(ld.textContent);
+            o.description = desc;
+            ld.textContent = JSON.stringify(o);
+          } catch (err) {
+            /* ignore */
+          }
+        }
+        document.title = "IllinoisDaycares.com — " + count.toLocaleString() + " Illinois daycare providers";
       }
 
       function formatPhone(p) {
@@ -531,7 +581,7 @@
           }
         }
         if (!fromMarker) {
-          if (markerLayer && typeof markerLayer.zoomToShowLayer === "function") {
+          if (markerLayer && markerLayer.zoomToShowLayer) {
             markerLayer.zoomToShowLayer(m, function () {
               map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
               m.openPopup();
@@ -877,7 +927,13 @@
       }
 
       function initMap() {
-        map = L.map("map", { scrollWheelZoom: true });
+        map = L.map("map", {
+          scrollWheelZoom: true,
+          /* 0.5 = half-step zoom: smoother than whole integers, far cheaper than zoomSnap:0 (constant tile rescale) */
+          zoomSnap: 0.5,
+          zoomDelta: 0.5,
+          wheelPxPerZoomLevel: 68,
+        });
 
         const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -960,15 +1016,20 @@
         osm.addTo(map);
         L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 
-        markerLayer = L.markerClusterGroup({
-          chunkedLoading: true,
-          chunkInterval: 120,
-          chunkDelay: 40,
-          maxClusterRadius: 70,
-          spiderfyOnMaxZoom: true,
-          showCoverageOnHover: false,
-          disableClusteringAtZoom: 18,
-        });
+        if (typeof L.markerClusterGroup === "function") {
+          markerLayer = L.markerClusterGroup({
+            chunkedLoading: true,
+            chunkInterval: 150,
+            chunkDelay: 50,
+            maxClusterRadius: 58,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            /* z13+ individual pins; z11–12 still cluster in dense areas (balance vs zoomSnap:0 + disable at 11) */
+            disableClusteringAtZoom: 13,
+          });
+        } else {
+          markerLayer = L.layerGroup();
+        }
         map.addLayer(markerLayer);
         userLayer = L.layerGroup();
         map.addLayer(userLayer);
@@ -1362,15 +1423,35 @@
         document.querySelectorAll('#status-filters input').forEach((el) => el.addEventListener("change", rerender));
       }
 
-      fetch("/api/v1/providers.json")
-        .then(function (r) {
+      function fetchProvidersJson() {
+        return fetch("/api/v1/providers.json").then(function (r) {
           if (r.ok) return r.json();
           return fetch("providers.json").then(function (r2) {
             if (!r2.ok) throw new Error("Could not load provider data");
             return r2.json();
           });
+        });
+      }
+
+      function fetchExportMeta() {
+        return fetch("/export_meta.json")
+          .then(function (r) {
+            return r.ok ? r.json() : {};
+          })
+          .catch(function () {
+            return {};
+          });
+      }
+
+      Promise.all([fetchProvidersJson(), fetchExportMeta()])
+        .then(function (results) {
+          const data = results[0];
+          const meta = results[1] && typeof results[1] === "object" ? results[1] : {};
+          return { data: data, meta: meta };
         })
-        .then((data) => {
+        .then(function (bundle) {
+          const data = bundle.data;
+          const meta = bundle.meta;
           loadFavoritesFromStorage();
           raw = data;
           providerById = new Map(
@@ -1383,6 +1464,19 @@
           });
           const ic = document.getElementById("intro-count");
           if (ic) ic.textContent = raw.length.toLocaleString();
+          const timeEl = document.getElementById("intro-export-date");
+          const exportedAt = meta.exportedAt;
+          if (timeEl) {
+            const dateStr = formatExportDateUS(exportedAt);
+            if (dateStr && exportedAt) {
+              timeEl.textContent = dateStr;
+              timeEl.setAttribute("datetime", exportedAt);
+            } else {
+              timeEl.textContent = "a recent Sunshine export";
+              timeEl.removeAttribute("datetime");
+            }
+          }
+          applyHomeSeoFromData(raw.length, exportedAt);
           document.getElementById("loading").classList.add("hidden");
           initMap();
           wireFilters();

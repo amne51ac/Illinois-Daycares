@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://illinoisdaycares.com/api/v1/provider.schema.json",
   "title": "Daycare provider",
-  "description": "Single licensed provider record from Illinois Daycares public data.",
+  "description": "Single licensed Illinois daycare provider record from IllinoisDaycares.com (searchable map + JSON API).",
   "type": "object",
   "additionalProperties": false,
   "properties": {
