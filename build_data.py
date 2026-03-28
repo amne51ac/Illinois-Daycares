@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Regenerate providers.json from Daycare Providers.csv.
+"""Regenerate providers.json from a normalized Sunshine CSV.
 
 Uses the U.S. Census Bureau Geocoder for street-level coordinates (free, no API key).
 Falls back to zip-code centroid (+ tiny offset) only when the address does not match.
+
+The site ships only providers.json (and api mirror); CSV is a local / CI build input.
 """
 from __future__ import annotations
 
+import argparse
 import csv
 import hashlib
 import json
@@ -19,7 +22,6 @@ import urllib.request
 import pgeocode
 
 CACHE_FILE = "geocode_cache.json"
-CSV_NAME = "Daycare Providers.csv"
 OUT_NAME = "providers.json"
 
 nomi = pgeocode.Nominatim("us")
@@ -83,12 +85,24 @@ def zip_fallback(zip_code: str, provider_id: str) -> tuple[float, float]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description="Geocode normalized CSV → providers.json")
+    ap.add_argument(
+        "--csv",
+        type=Path,
+        default=Path("Daycare Providers.csv"),
+        help="Normalized CSV (from normalize_sunshine_csv.py). Default: Daycare Providers.csv",
+    )
+    args = ap.parse_args()
+    csv_path: Path = args.csv
+    if not csv_path.is_file():
+        raise SystemExit(f"CSV not found: {csv_path}")
+
     cache = load_cache()
     rows_out: list[dict] = []
     stats = {"census_hit": 0, "cache_hit": 0, "fallback": 0}
     n = 0
 
-    with open(CSV_NAME, newline="", encoding="utf-8") as f:
+    with csv_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         all_rows = list(reader)
 
@@ -144,7 +158,7 @@ def main() -> None:
 
     save_cache(cache)
     with open(OUT_NAME, "w", encoding="utf-8") as out:
-        json.dump(rows_out, out, ensure_ascii=False)
+        json.dump(rows_out, out, ensure_ascii=False, separators=(",", ":"))
 
     api_path = Path("api/v1/providers.json")
     api_path.parent.mkdir(parents=True, exist_ok=True)

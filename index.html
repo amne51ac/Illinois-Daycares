@@ -27,6 +27,8 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/site.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
 </head>
 <body>
   <a class="skip-link" href="#map">Skip to map</a>
@@ -38,6 +40,10 @@
       <a href="/" aria-current="page">Map</a>
       <a href="/about.html">About</a>
       <a href="/api.html">API</a>
+      <a href="https://github.com/amne51ac/Illinois-Daycares" class="nav-github" rel="noopener noreferrer" target="_blank" title="Source on GitHub" aria-label="Source code on GitHub (opens in new tab)">
+        <svg class="nav-github-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span aria-hidden="true">GitHub</span>
+      </a>
     </nav>
   </header>
   <div id="loading" class="loading-overlay">
@@ -110,22 +116,63 @@
             <label>Options</label>
             <div class="checks">
               <label class="inline"><input type="checkbox" id="night-only" /> Night capacity &gt; 0</label>
+              <label class="inline"><input type="checkbox" id="fav-only" /> Favorites only</label>
             </div>
           </div>
+          <fieldset class="filter-fieldset">
+            <legend>Saved &amp; share</legend>
+            <p class="share-hint">Favorites and saved searches stay on this device. Share links include your filters (and optional pin location if set).</p>
+            <div class="btn-row share-actions">
+              <button type="button" class="primary" id="btn-share-search">Copy share link</button>
+            </div>
+            <div class="save-search-row">
+              <input type="text" id="saved-search-name" placeholder="Name this search…" maxlength="80" autocomplete="off" />
+              <button type="button" id="btn-save-search">Save</button>
+            </div>
+            <div id="saved-searches-box" class="saved-searches-box" hidden>
+              <span class="saved-label">Saved</span>
+              <ul id="saved-searches-list" class="saved-searches-list"></ul>
+            </div>
+          </fieldset>
         </div>
       </details>
       <div class="meta-bar">
         <span id="count">0 shown</span>
         <button type="button" id="fit-bounds">Fit map to results</button>
       </div>
-      <div class="list-wrap">
-        <div class="list" id="list" role="listbox" aria-label="Providers"></div>
+      <details class="filters-wrap favorites-accordion" id="favorites-accordion">
+        <summary>
+          <span class="favorites-summary-text"
+            >Favorites <span class="favorites-accordion-count" id="favorites-accordion-count"></span
+          ></span>
+        </summary>
+        <div class="favorites-accordion-body" id="favorites-accordion-body">
+          <p class="favorites-empty muted" id="favorites-empty">
+            No favorites yet—tap ☆ on a provider in the list or map popup.
+          </p>
+          <ul class="favorites-accordion-list" id="favorites-accordion-list" hidden></ul>
+        </div>
+      </details>
+      <div class="list-wrap" id="list-scroll">
+        <div class="list vlist" id="list" role="listbox" aria-label="Providers">
+          <div id="list-inner" class="list-inner"></div>
+        </div>
       </div>
     </aside>
     <main id="map" role="application" aria-label="Map of daycare providers"></main>
   </div>
+  <footer class="site-footer" role="contentinfo">
+    <p class="site-footer-links">
+      <a href="/privacy.html">Privacy</a>
+      <span class="site-footer-sep" aria-hidden="true">·</span>
+      <a href="/terms.html">Terms</a>
+    </p>
+    <p>© 2026 <a href="https://github.com/amne51ac" rel="noopener noreferrer" target="_blank" title="Mark Milhouse on GitHub" aria-label="Mark Milhouse on GitHub (opens in new tab)">Mark Milhouse</a></p>
+  </footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
   <script>
     (function () {
       const FT_LABEL = { DCC: "Day care center", DCH: "Day care home", GDC: "Group day care home" };
@@ -150,6 +197,8 @@
 
       let raw = [];
       let filtered = [];
+      /** @type {Map<string, object>} */
+      let providerById = new Map();
       let selectedId = null;
       let map;
       let markerLayer;
@@ -157,6 +206,43 @@
       /** @type {{ lat: number, lon: number, label: string } | null} */
       let userPoint = null;
       const markersById = {};
+      let lastFilterSig = null;
+      let lastSortKey = null;
+      const LIST_ROW = 92;
+      let listVirtBound = false;
+
+      const LS_FAV = "il-daycare-favorites";
+      const LS_SAVED = "il-daycare-saved-searches";
+      /** @type {Set<string>} */
+      let favoriteIds = new Set();
+
+      function loadFavoritesFromStorage() {
+        try {
+          const raw = localStorage.getItem(LS_FAV);
+          const arr = raw ? JSON.parse(raw) : [];
+          favoriteIds = new Set(Array.isArray(arr) ? arr : []);
+        } catch (e) {
+          favoriteIds = new Set();
+        }
+      }
+
+      function persistFavorites() {
+        try {
+          localStorage.setItem(LS_FAV, JSON.stringify(Array.from(favoriteIds)));
+        } catch (e) {
+          /* quota or private mode */
+        }
+      }
+
+      function isFavorite(id) {
+        return favoriteIds.has(id);
+      }
+
+      function toggleFavoriteId(id) {
+        if (favoriteIds.has(id)) favoriteIds.delete(id);
+        else favoriteIds.add(id);
+        persistFavorites();
+      }
 
       const RED_ICON = L.icon({
         iconUrl: "https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-2x-red.png",
@@ -229,17 +315,16 @@
         document.querySelectorAll('#ftype-filters input[type="checkbox"]:checked').forEach(function (cb) {
           selected.push(cb.value);
         });
-        if (selected.length === 0) return ["DCC", "DCH", "GDC"];
         return selected;
       }
 
       function passesFilters(p) {
         const q = document.getElementById("q").value.trim().toLowerCase();
         if (q) {
-          const blob = [p.name, p.street, p.zip, p.phone, p.id].join(" ").toLowerCase();
-          if (!blob.includes(q)) return false;
+          if (!p._q || !p._q.includes(q)) return false;
         }
-        if (!getSelectedFacilityTypes().includes(p.facilityType)) return false;
+        const ftSel = getSelectedFacilityTypes();
+        if (ftSel.length === 0 || !ftSel.includes(p.facilityType)) return false;
         const buckets = {};
         document.querySelectorAll('#status-filters input[type="checkbox"]').forEach((cb) => {
           buckets[cb.value] = cb.checked;
@@ -247,6 +332,7 @@
         const b = statusBucket(p.status);
         if (!buckets[b]) return false;
         if (document.getElementById("night-only").checked && !(p.nightCap > 0)) return false;
+        if (document.getElementById("fav-only").checked && !isFavorite(p.id)) return false;
         if (userPoint) {
           const maxEl = document.getElementById("max-dist");
           const v = parseFloat(maxEl.value);
@@ -314,81 +400,271 @@
               " <span style=\"color:#8b9cb3\">(straight line)</span></dd>"
             );
           })() +
-          "</dl></div>"
+          "</dl>" +
+          '<div class="popup-actions">' +
+          '<button type="button" class="popup-fav-btn" data-fav-id="' +
+          escapeHtml(p.id) +
+          '" aria-pressed="' +
+          (isFavorite(p.id) ? "true" : "false") +
+          '">' +
+          (isFavorite(p.id) ? "★ Favorited" : "☆ Favorite") +
+          "</button></div></div>"
         );
       }
 
-      function refreshAllPopups() {
-        Object.keys(markersById).forEach(function (id) {
-          const p = raw.find(function (x) {
-            return x.id === id;
-          });
-          if (p) markersById[id].setPopupContent(popupHtml(p));
+      function refreshOpenPopup() {
+        const m = map && map._popupMarker;
+        if (!m || !m._provId) return;
+        const p = providerById.get(m._provId);
+        if (p) m.setPopupContent(popupHtml(p));
+      }
+
+      function signatureForPassing(passing) {
+        const ids = new Array(passing.length);
+        for (let i = 0; i < passing.length; i++) ids[i] = passing[i].id;
+        ids.sort();
+        return ids.join("\0");
+      }
+
+      function buildCardEl(p) {
+        const div = document.createElement("div");
+        div.className = "card" + (p.id === selectedId ? " selected" : "");
+        div.dataset.id = p.id;
+        div.setAttribute("role", "option");
+        div.setAttribute("aria-selected", p.id === selectedId ? "true" : "false");
+        div.innerHTML =
+          '<div class="card-top">' +
+          '<button type="button" class="card-fav" data-fav-id="' +
+          escapeHtml(p.id) +
+          '" aria-label="' +
+          (isFavorite(p.id) ? "Remove from favorites" : "Add to favorites") +
+          '" aria-pressed="' +
+          (isFavorite(p.id) ? "true" : "false") +
+          '">' +
+          (isFavorite(p.id) ? "★" : "☆") +
+          "</button>" +
+          '<div class="name">' +
+          escapeHtml(p.name) +
+          "</div></div>" +
+          '<div class="line">' +
+          escapeHtml(p.street) +
+          " · " +
+          escapeHtml(p.zip) +
+          '</div><div class="line">' +
+          escapeHtml(formatPhone(p.phone)) +
+          ' · day cap ' +
+          p.dayCap +
+          (function () {
+            var d = distanceMi(p);
+            if (d == null) return "";
+            return ' · <span style="color:var(--accent)">' + formatMi(d) + "</span>";
+          })() +
+          '</div><span class="badge">' +
+          escapeHtml(FT_LABEL[p.facilityType] || p.facilityType) +
+          "</span>";
+        div.addEventListener("click", function (ev) {
+          if (ev.target.closest(".card-fav")) return;
+          selectProvider(p.id, false);
         });
+        const favBtn = div.querySelector(".card-fav");
+        if (favBtn) {
+          favBtn.addEventListener("click", function (ev) {
+            ev.stopPropagation();
+            toggleFavoriteId(p.id);
+            renderList();
+            if (selectedId === p.id) refreshOpenPopup();
+            syncUrlDebounced();
+          });
+        }
+        return div;
+      }
+
+      function layoutVirtualList() {
+        const scrollEl = document.getElementById("list-scroll");
+        const inner = document.getElementById("list-inner");
+        if (!scrollEl || !inner) return;
+        inner.style.minHeight = Math.max(0, filtered.length * LIST_ROW) + "px";
+        let slice = document.getElementById("list-slice");
+        if (!slice) {
+          slice = document.createElement("div");
+          slice.id = "list-slice";
+          slice.className = "list-slice";
+          inner.appendChild(slice);
+        }
+        const scrollTop = scrollEl.scrollTop;
+        const vh = scrollEl.clientHeight;
+        let i0 = Math.floor(scrollTop / LIST_ROW);
+        let i1 = Math.ceil((scrollTop + vh) / LIST_ROW);
+        const pad = 10;
+        i0 = Math.max(0, i0 - pad);
+        i1 = Math.min(filtered.length, i1 + pad);
+        slice.style.transform = "translateY(" + i0 * LIST_ROW + "px)";
+        slice.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        for (let i = i0; i < i1; i++) {
+          frag.appendChild(buildCardEl(filtered[i]));
+        }
+        slice.appendChild(frag);
       }
 
       function selectProvider(id, fromMarker) {
         selectedId = id;
-        document.querySelectorAll(".card").forEach((el) => {
-          const on = el.dataset.id === id;
-          el.classList.toggle("selected", on);
-          el.setAttribute("aria-selected", on ? "true" : "false");
-        });
+        function paintSelection() {
+          document.querySelectorAll(".card").forEach(function (el) {
+            const on = el.dataset.id === id;
+            el.classList.toggle("selected", on);
+            el.setAttribute("aria-selected", on ? "true" : "false");
+          });
+        }
+        paintSelection();
         const m = markersById[id];
         if (!m) return;
-        if (!fromMarker) {
-          map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+        const scrollEl = document.getElementById("list-scroll");
+        if (!fromMarker && scrollEl) {
+          const idx = filtered.findIndex(function (p) {
+            return p.id === id;
+          });
+          if (idx >= 0) {
+            scrollEl.scrollTop = Math.max(0, idx * LIST_ROW - scrollEl.clientHeight * 0.35);
+            layoutVirtualList();
+            paintSelection();
+          }
         }
-        m.openPopup();
+        if (!fromMarker) {
+          if (markerLayer && typeof markerLayer.zoomToShowLayer === "function") {
+            markerLayer.zoomToShowLayer(m, function () {
+              map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+              m.openPopup();
+            });
+          } else {
+            map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
+            m.openPopup();
+          }
+        } else {
+          m.openPopup();
+        }
         const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
         if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
 
       function renderList() {
-        const list = document.getElementById("list");
-        list.innerHTML = "";
         const sortKey = getSortValue();
-        filtered = sortData(raw.filter(passesFilters), sortKey);
+        const passing = raw.filter(passesFilters);
+        const filterSig = signatureForPassing(passing);
+        filtered = sortData(passing, sortKey);
         document.getElementById("count").textContent = filtered.length + " shown";
 
-        const frag = document.createDocumentFragment();
-        filtered.forEach((p) => {
-          const div = document.createElement("div");
-          div.className = "card" + (p.id === selectedId ? " selected" : "");
-          div.dataset.id = p.id;
-          div.setAttribute("role", "option");
-          div.setAttribute("aria-selected", p.id === selectedId ? "true" : "false");
-          div.innerHTML =
-            '<div class="name">' +
-            escapeHtml(p.name) +
-            '</div><div class="line">' +
-            escapeHtml(p.street) +
-            " · " +
-            escapeHtml(p.zip) +
-            '</div><div class="line">' +
-            escapeHtml(formatPhone(p.phone)) +
-            ' · day cap ' +
-            p.dayCap +
-            (function () {
-              var d = distanceMi(p);
-              if (d == null) return "";
-              return ' · <span style="color:var(--accent)">' + formatMi(d) + "</span>";
-            })() +
-            '</div><span class="badge">' +
-            escapeHtml(FT_LABEL[p.facilityType] || p.facilityType) +
-            "</span>";
-          div.addEventListener("click", () => selectProvider(p.id, false));
-          frag.appendChild(div);
+        const scrollEl = document.getElementById("list-scroll");
+        if (filterSig !== lastFilterSig) {
+          lastFilterSig = filterSig;
+          if (markerLayer) refreshMarkers();
+          if (scrollEl) scrollEl.scrollTop = 0;
+        } else if (sortKey !== lastSortKey) {
+          if (scrollEl) scrollEl.scrollTop = 0;
+        }
+        lastSortKey = sortKey;
+
+        if (selectedId) {
+          const still = filtered.some(function (p) {
+            return p.id === selectedId;
+          });
+          if (!still) {
+            selectedId = null;
+            document.querySelectorAll(".card.selected").forEach(function (el) {
+              el.classList.remove("selected");
+            });
+          }
+        }
+
+        layoutVirtualList();
+
+        if (!listVirtBound && scrollEl) {
+          listVirtBound = true;
+          scrollEl.addEventListener(
+            "scroll",
+            debounce(function () {
+              layoutVirtualList();
+            }, 24),
+            { passive: true }
+          );
+        }
+        renderFavoritesAccordion();
+      }
+
+      function renderFavoritesAccordion() {
+        const listEl = document.getElementById("favorites-accordion-list");
+        const emptyEl = document.getElementById("favorites-empty");
+        const countEl = document.getElementById("favorites-accordion-count");
+        if (!listEl || !emptyEl || !countEl) return;
+        const favs = [];
+        favoriteIds.forEach(function (id) {
+          const p = providerById.get(id);
+          if (p) favs.push(p);
         });
-        list.appendChild(frag);
-        refreshMarkers();
+        favs.sort(function (a, b) {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        });
+        countEl.textContent = favs.length ? "(" + favs.length + ")" : "";
+        if (!favs.length) {
+          emptyEl.hidden = false;
+          listEl.hidden = true;
+          listEl.innerHTML = "";
+          return;
+        }
+        emptyEl.hidden = true;
+        listEl.hidden = false;
+        listEl.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        favs.forEach(function (p) {
+          const li = document.createElement("li");
+          li.className = "favorites-accordion-item";
+          li.innerHTML =
+            '<button type="button" class="favorites-accordion-row" data-id="' +
+            escapeHtml(p.id) +
+            '"><span class="favorites-accordion-name">' +
+            escapeHtml(p.name) +
+            '</span><span class="muted favorites-accordion-meta">' +
+            escapeHtml(p.zip) +
+            '</span></button>' +
+            '<button type="button" class="favorites-accordion-remove" data-fav-id="' +
+            escapeHtml(p.id) +
+            '" aria-label="Remove from favorites">×</button>';
+          frag.appendChild(li);
+        });
+        listEl.appendChild(frag);
+      }
+
+      function wireFavoritesAccordion() {
+        const body = document.getElementById("favorites-accordion-body");
+        if (!body || body.dataset.wired === "1") return;
+        body.dataset.wired = "1";
+        body.addEventListener("click", function (ev) {
+          const removeBtn = ev.target.closest(".favorites-accordion-remove");
+          if (removeBtn) {
+            ev.preventDefault();
+            const id = removeBtn.getAttribute("data-fav-id");
+            if (!id) return;
+            toggleFavoriteId(id);
+            renderList();
+            if (selectedId === id) refreshOpenPopup();
+            syncUrlDebounced();
+            return;
+          }
+          const row = ev.target.closest(".favorites-accordion-row");
+          if (row) {
+            const id = row.getAttribute("data-id");
+            if (id) selectProvider(id, false);
+          }
+        });
       }
 
       function refreshMarkers() {
+        if (!markerLayer) return;
         const visible = new Set(filtered.map((p) => p.id));
         markerLayer.clearLayers();
-        Object.keys(markersById).forEach((id) => {
-          if (visible.has(id)) markerLayer.addLayer(markersById[id]);
+        filtered.forEach(function (p) {
+          const m = markersById[p.id];
+          if (m) markerLayer.addLayer(m);
         });
         if (selectedId && !visible.has(selectedId)) {
           selectedId = null;
@@ -470,14 +746,17 @@
         }
       }
 
-      function setUserLocation(lat, lon, label) {
+      function setUserLocation(lat, lon, label, skipMapPan) {
         userPoint = { lat: lat, lon: lon, label: label || "Your location" };
         updateDistanceControls();
         drawUserLayer();
-        refreshAllPopups();
-        map.setView([lat, lon], Math.max(map.getZoom(), 13), { animate: true });
+        refreshOpenPopup();
+        if (!skipMapPan) {
+          map.setView([lat, lon], Math.max(map.getZoom(), 13), { animate: true });
+        }
         renderList();
         hideGeoError();
+        syncUrlDebounced();
       }
 
       function clearUserLocation() {
@@ -489,9 +768,10 @@
           document.querySelector('#sort-radios input[name="sort"][value="name-asc"]').checked = true;
         }
         document.getElementById("max-dist").value = "";
-        refreshAllPopups();
+        refreshOpenPopup();
         renderList();
         hideGeoError();
+        syncUrlDebounced();
       }
 
       async function geocodeAddressText(query) {
@@ -579,8 +859,15 @@
         document.getElementById("btn-clear-location").addEventListener("click", clearUserLocation);
         document.getElementById("show-rings").addEventListener("change", function () {
           if (userPoint) drawUserLayer();
+          syncUrlDebounced();
         });
-        document.getElementById("max-dist").addEventListener("input", debounce(renderList, 200));
+        document.getElementById("max-dist").addEventListener(
+          "input",
+          debounce(function () {
+            renderList();
+            syncUrlDebounced();
+          }, 200)
+        );
         document.getElementById("user-address").addEventListener("keydown", function (ev) {
           if (ev.key === "Enter") {
             ev.preventDefault();
@@ -673,35 +960,358 @@
         osm.addTo(map);
         L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 
-        markerLayer = L.layerGroup();
+        markerLayer = L.markerClusterGroup({
+          chunkedLoading: true,
+          chunkInterval: 120,
+          chunkDelay: 40,
+          maxClusterRadius: 70,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          disableClusteringAtZoom: 18,
+        });
         map.addLayer(markerLayer);
         userLayer = L.layerGroup();
         map.addLayer(userLayer);
 
         raw.forEach((p) => {
           const m = L.marker([p.lat, p.lon], { title: p.name });
-          m.bindPopup(popupHtml(p), { maxWidth: 340 });
-          m.on("click", () => {
+          m._provId = p.id;
+          m.bindPopup(
+            function () {
+              return popupHtml(p);
+            },
+            { maxWidth: 340 }
+          );
+          m.on("popupopen", function () {
+            map._popupMarker = this;
+          });
+          m.on("popupclose", function () {
+            if (map._popupMarker === this) map._popupMarker = null;
+          });
+          m.on("click", function () {
             selectProvider(p.id, true);
           });
           markersById[p.id] = m;
         });
 
         updateDistanceControls();
-        renderList();
-        fitIllinois();
 
         document.getElementById("fit-bounds").addEventListener("click", fitToVisible);
         wireLocation();
       }
 
-      function wireFilters() {
-        const rerender = () => renderList();
-        document.getElementById("q").addEventListener("input", debounce(rerender, 200));
-        document.querySelectorAll('#sort-radios input[name="sort"]').forEach((el) => el.addEventListener("change", rerender));
-        document.querySelectorAll("#ftype-filters input").forEach((el) => el.addEventListener("change", rerender));
-        document.getElementById("night-only").addEventListener("change", rerender);
-        document.querySelectorAll('#status-filters input').forEach((el) => el.addEventListener("change", rerender));
+      function utf8ToB64Url(str) {
+        const bytes = new TextEncoder().encode(str);
+        let bin = "";
+        bytes.forEach(function (b) {
+          bin += String.fromCharCode(b);
+        });
+        return btoa(bin)
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/g, "");
+      }
+
+      function b64UrlToUtf8(s) {
+        let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+      }
+
+      function toBase64Url(obj) {
+        return utf8ToB64Url(JSON.stringify(obj));
+      }
+
+      function fromBase64Url(s) {
+        return JSON.parse(b64UrlToUtf8(s));
+      }
+
+      function getSearchState() {
+        const f = [];
+        document.querySelectorAll('#ftype-filters input').forEach(function (cb) {
+          if (cb.checked) f.push(cb.value);
+        });
+        const t = [];
+        document.querySelectorAll('#status-filters input').forEach(function (cb) {
+          if (cb.checked) t.push(cb.value);
+        });
+        let u = null;
+        if (userPoint) {
+          u = [
+            Math.round(userPoint.lat * 10000) / 10000,
+            Math.round(userPoint.lon * 10000) / 10000,
+            String(userPoint.label || "").slice(0, 120),
+          ];
+        }
+        return {
+          v: 1,
+          q: document.getElementById("q").value,
+          f: f,
+          t: t,
+          so: getSortValue(),
+          n: document.getElementById("night-only").checked,
+          F: document.getElementById("fav-only").checked,
+          r: !!userPoint && document.getElementById("show-rings").checked,
+          m: document.getElementById("max-dist").value || "",
+          a: document.getElementById("user-address").value || "",
+          u: u,
+        };
+      }
+
+      function isDefaultSearchState(st) {
+        return (
+          !st.q &&
+          Array.isArray(st.f) &&
+          st.f.length === 3 &&
+          st.f.includes("DCC") &&
+          st.f.includes("DCH") &&
+          st.f.includes("GDC") &&
+          Array.isArray(st.t) &&
+          st.t.length === 3 &&
+          st.t.includes("licensed") &&
+          st.t.includes("pending") &&
+          st.t.includes("other") &&
+          st.so === "name-asc" &&
+          !st.n &&
+          !st.F &&
+          !st.r &&
+          !st.m &&
+          !st.a &&
+          !st.u
+        );
+      }
+
+      function syncUrlToState() {
+        if (!history.replaceState) return;
+        const st = getSearchState();
+        const u = new URL(location.href);
+        if (isDefaultSearchState(st)) {
+          u.search = "";
+          history.replaceState(null, "", u.pathname + u.hash);
+          return;
+        }
+        u.search = "";
+        u.searchParams.set("s", toBase64Url(st));
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+
+      function buildShareUrl() {
+        const u = new URL(location.href);
+        u.search = "";
+        u.searchParams.set("s", toBase64Url(getSearchState()));
+        return u.toString();
+      }
+
+      function stateFromFlatParams(p) {
+        const f = (p.get("ft") || "DCC,DCH,GDC")
+          .split(",")
+          .map(function (x) {
+            return x.trim();
+          })
+          .filter(Boolean);
+        const t = (p.get("st") || "licensed,pending,other")
+          .split(",")
+          .map(function (x) {
+            return x.trim();
+          })
+          .filter(Boolean);
+        let u = null;
+        if (p.has("lat") && p.has("lon")) {
+          const la = parseFloat(p.get("lat"));
+          const lo = parseFloat(p.get("lon"));
+          if (!isNaN(la) && !isNaN(lo)) {
+            let lbl = "Shared location";
+            const rawLbl = p.get("ulbl");
+            if (rawLbl) {
+              try {
+                lbl = decodeURIComponent(rawLbl).slice(0, 120);
+              } catch (e) {
+                lbl = rawLbl.slice(0, 120);
+              }
+            }
+            u = [la, lo, lbl];
+          }
+        }
+        return {
+          v: 1,
+          q: p.get("q") || "",
+          f: f.length ? f : ["DCC", "DCH", "GDC"],
+          t: t.length ? t : ["licensed", "pending", "other"],
+          so: p.get("sort") || "name-asc",
+          n: p.get("night") === "1",
+          F: p.get("fav") === "1",
+          r: p.get("rings") === "1",
+          m: p.get("md") || "",
+          a: p.get("addr") || "",
+          u: u,
+        };
+      }
+
+      function tryParseStateFromUrl() {
+        const p = new URLSearchParams(location.search);
+        const enc = p.get("s");
+        if (enc) {
+          try {
+            return { state: fromBase64Url(enc), fromShare: true };
+          } catch (e) {
+            return null;
+          }
+        }
+        if (
+          p.has("q") ||
+          p.has("ft") ||
+          p.has("st") ||
+          p.has("sort") ||
+          p.has("night") ||
+          p.has("fav") ||
+          p.has("lat") ||
+          p.has("md") ||
+          p.has("rings") ||
+          p.has("addr")
+        ) {
+          return { state: stateFromFlatParams(p), fromShare: true };
+        }
+        return null;
+      }
+
+      function applySearchState(st) {
+        if (!st || st.v !== 1) return;
+        document.getElementById("q").value = typeof st.q === "string" ? st.q : "";
+        const allFt = ["DCC", "DCH", "GDC"];
+        const f = Array.isArray(st.f) ? st.f : allFt;
+        document.querySelectorAll("#ftype-filters input").forEach(function (cb) {
+          cb.checked = f.includes(cb.value);
+        });
+        const allSt = ["licensed", "pending", "other"];
+        const t = Array.isArray(st.t) ? st.t : allSt;
+        document.querySelectorAll("#status-filters input").forEach(function (cb) {
+          cb.checked = t.includes(cb.value);
+        });
+        let so = st.so && typeof st.so === "string" ? st.so : "name-asc";
+        document.getElementById("night-only").checked = !!st.n;
+        document.getElementById("fav-only").checked = !!st.F;
+        document.getElementById("user-address").value = typeof st.a === "string" ? st.a : "";
+        document.getElementById("max-dist").value = st.m != null && st.m !== "" ? String(st.m) : "";
+        if (st.u && typeof st.u[0] === "number" && typeof st.u[1] === "number" && !isNaN(st.u[0]) && !isNaN(st.u[1])) {
+          userPoint = {
+            lat: st.u[0],
+            lon: st.u[1],
+            label: typeof st.u[2] === "string" ? st.u[2] : "Shared location",
+          };
+          document.getElementById("show-rings").checked = !!st.r;
+        } else {
+          userPoint = null;
+          document.getElementById("show-rings").checked = false;
+        }
+        updateDistanceControls();
+        if ((so === "dist-asc" || so === "dist-desc") && !userPoint) {
+          so = "name-asc";
+        }
+        const soEsc = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(so) : so;
+        const sortInp = document.querySelector('#sort-radios input[name="sort"][value="' + soEsc + '"]');
+        if (sortInp && !sortInp.disabled) sortInp.checked = true;
+        else document.querySelector('#sort-radios input[name="sort"][value="name-asc"]').checked = true;
+        if (userPoint) drawUserLayer();
+        else userLayer.clearLayers();
+      }
+
+      function loadSavedSearches() {
+        try {
+          const raw = localStorage.getItem(LS_SAVED);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveSavedSearches(arr) {
+        try {
+          localStorage.setItem(LS_SAVED, JSON.stringify(arr.slice(0, 25)));
+        } catch (e) {}
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.hidden = false;
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(function () {
+          el.hidden = true;
+        }, 2800);
+      }
+
+      function renderSavedSearchesList() {
+        const list = document.getElementById("saved-searches-list");
+        const box = document.getElementById("saved-searches-box");
+        const items = loadSavedSearches();
+        box.hidden = items.length === 0;
+        list.innerHTML = "";
+        items.forEach(function (item) {
+          const li = document.createElement("li");
+          li.className = "saved-search-item";
+          li.innerHTML =
+            '<span class="saved-name">' +
+            escapeHtml(item.name) +
+            '</span><span class="saved-actions">' +
+            '<button type="button" class="linkish" data-apply-id="' +
+            escapeHtml(String(item.id)) +
+            '">Apply</button> ' +
+            '<button type="button" class="linkish danger-text" data-del-id="' +
+            escapeHtml(String(item.id)) +
+            '">Remove</button></span>';
+          li.querySelector("[data-apply-id]").addEventListener("click", function () {
+            applySearchState(item.state);
+            renderList();
+            refreshOpenPopup();
+            syncUrlDebounced();
+            if (filtered.length) fitToVisible();
+            else fitIllinois();
+          });
+          li.querySelector("[data-del-id]").addEventListener("click", function () {
+            const next = loadSavedSearches().filter(function (x) {
+              return String(x.id) !== String(item.id);
+            });
+            saveSavedSearches(next);
+            renderSavedSearchesList();
+          });
+          list.appendChild(li);
+        });
+      }
+
+      function saveNamedSearch() {
+        const name = document.getElementById("saved-search-name").value.trim();
+        if (!name) {
+          showToast("Enter a name first");
+          return;
+        }
+        const entry = { id: String(Date.now()), name: name, state: getSearchState() };
+        const arr = loadSavedSearches();
+        arr.unshift(entry);
+        saveSavedSearches(arr);
+        document.getElementById("saved-search-name").value = "";
+        renderSavedSearchesList();
+        showToast("Search saved on this device");
+      }
+
+      function copyShareLink() {
+        const url = buildShareUrl();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(
+            function () {
+              showToast("Share link copied");
+              syncUrlToState();
+            },
+            function () {
+              window.prompt("Copy this link:", url);
+            }
+          );
+        } else {
+          window.prompt("Copy this link:", url);
+        }
       }
 
       function debounce(fn, ms) {
@@ -710,6 +1320,46 @@
           clearTimeout(t);
           t = setTimeout(() => fn.apply(this, arguments), ms);
         };
+      }
+
+      const syncUrlDebounced = debounce(function () {
+        syncUrlToState();
+      }, 450);
+
+      function wireSearchFeatures() {
+        document.getElementById("btn-share-search").addEventListener("click", copyShareLink);
+        document.getElementById("btn-save-search").addEventListener("click", saveNamedSearch);
+        document.getElementById("saved-search-name").addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            saveNamedSearch();
+          }
+        });
+        document.addEventListener("click", function (ev) {
+          const btn = ev.target.closest(".popup-fav-btn");
+          if (!btn) return;
+          const id = btn.getAttribute("data-fav-id");
+          if (!id) return;
+          ev.preventDefault();
+          toggleFavoriteId(id);
+          renderList();
+          const mk = markersById[id];
+          if (mk) refreshOpenPopup();
+          syncUrlDebounced();
+        });
+      }
+
+      function wireFilters() {
+        const rerender = function () {
+          renderList();
+          syncUrlDebounced();
+        };
+        document.getElementById("q").addEventListener("input", debounce(rerender, 200));
+        document.querySelectorAll('#sort-radios input[name="sort"]').forEach((el) => el.addEventListener("change", rerender));
+        document.querySelectorAll("#ftype-filters input").forEach((el) => el.addEventListener("change", rerender));
+        document.getElementById("night-only").addEventListener("change", rerender);
+        document.getElementById("fav-only").addEventListener("change", rerender);
+        document.querySelectorAll('#status-filters input').forEach((el) => el.addEventListener("change", rerender));
       }
 
       fetch("/api/v1/providers.json")
@@ -721,12 +1371,34 @@
           });
         })
         .then((data) => {
+          loadFavoritesFromStorage();
           raw = data;
+          providerById = new Map(
+            raw.map(function (p) {
+              return [p.id, p];
+            })
+          );
+          raw.forEach(function (p) {
+            p._q = (p.name + " " + p.street + " " + p.zip + " " + p.phone + " " + p.id).toLowerCase();
+          });
           const ic = document.getElementById("intro-count");
           if (ic) ic.textContent = raw.length.toLocaleString();
           document.getElementById("loading").classList.add("hidden");
           initMap();
           wireFilters();
+          wireSearchFeatures();
+          wireFavoritesAccordion();
+          const shared = tryParseStateFromUrl();
+          if (shared && shared.state) applySearchState(shared.state);
+          renderSavedSearchesList();
+          renderList();
+          if (shared && shared.fromShare) {
+            syncUrlToState();
+            if (filtered.length) fitToVisible();
+            else fitIllinois();
+          } else {
+            fitIllinois();
+          }
         })
         .catch((e) => {
           document.getElementById("loading").innerHTML =

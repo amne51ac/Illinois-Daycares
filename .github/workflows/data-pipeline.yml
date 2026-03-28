@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       run_fetch:
-        description: "Run full IL Sunshine scrape (slow; may approach CI time limits)"
+        description: "Run IL Sunshine export (ZIP partial 6 → single CSV; ~1–2 min)"
         required: false
         default: false
         type: boolean
   push:
     branches: [main]
     paths:
-      - "Daycare Providers.csv"
+      - "export_meta.json"
       - "build_data.py"
       - "requirements.txt"
       - "normalize_sunshine_csv.py"
@@ -48,14 +48,20 @@ jobs:
 
       - name: Scrape and normalize
         run: |
-          python fetch_il_daycare_by_county.py --all --out-dir ./sunshine_out --headless
-          python normalize_sunshine_csv.py --in ./sunshine_out/all_counties.csv --out "Daycare Providers.csv"
+          python fetch_il_daycare_by_county.py --out-dir ./sunshine_out --headless
+          python normalize_sunshine_csv.py --in ./sunshine_out/illinois_sunshine_export.csv --out "Daycare Providers.csv"
+
+      - name: Write export metadata
+        run: |
+          python3 -c "import json, datetime; print(json.dumps({'exportedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}, indent=2))" > export_meta.json
 
       - name: Upload CSV artifact
         uses: actions/upload-artifact@v4
         with:
           name: daycare-csv
-          path: Daycare Providers.csv
+          path: |
+            Daycare Providers.csv
+            export_meta.json
 
   geocode:
     name: Geocode and commit JSON
@@ -82,14 +88,19 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build providers.json
-        run: python build_data.py
+        run: |
+          if [ -f "Daycare Providers.csv" ]; then
+            python build_data.py --csv "Daycare Providers.csv"
+          else
+            echo "No Daycare Providers.csv (fetch artifact or local file); skipping geocode build."
+          fi
 
       - name: Commit data artifacts
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add providers.json geocode_cache.json api/v1/providers.json
-          if [ -f "Daycare Providers.csv" ]; then git add "Daycare Providers.csv"; fi
+          if [ -f "export_meta.json" ]; then git add export_meta.json; fi
           if git diff --staged --quiet; then
             echo "No data changes to commit."
           else

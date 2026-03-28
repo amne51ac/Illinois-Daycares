@@ -8,3 +8,5 @@ venv/
 sunshine_out/
 sunshine_county_exports/
 playwright-report/
+# Sunshine CSV exports (site ships providers.json only; CI uses artifact CSV)
+Daycare Providers*.csv

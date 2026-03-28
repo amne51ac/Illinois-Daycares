@@ -16,7 +16,9 @@ Requirements: Python 3.10+.
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python3 build_data.py       # writes providers.json + api/v1/providers.json from Daycare Providers.csv
+# Normalize a Sunshine export, then geocode (CSV is local input only; the site loads providers.json)
+python3 normalize_sunshine_csv.py --in path/to/export.csv --out /tmp/il.csv
+python3 build_data.py --csv /tmp/il.csv
 ```
 
 Open `index.html` with a local static server (needed to load JSON):
@@ -39,12 +41,17 @@ Static JSON (no query parameters). See **`api.html`** on the site or these URLs:
 
 The map tries `/api/v1/providers.json` first, then falls back to `providers.json`. GitHub Pages does not set custom CORS headers; use a server-side client or same-origin requests if browsers block cross-origin `fetch`.
 
+## Map: favorites, saved searches, share links
+
+- **Favorites** — Star on list cards or in the marker popup; stored in `localStorage` on this device only.
+- **Saved searches** — Name the current filters + search + sort (+ optional pin) and re-apply from the list under *Saved & share*.
+- **Share** — *Copy share link* puts a short URL on the clipboard using `?s=<base64url>` (UTF-8 JSON). Opening that URL restores the same filters; if a pin was set, lat/lon (4 decimal places) and label are included. Non-default filters also update the address bar (debounced) so you can bookmark. See `api.html` for plain query-parameter alternatives.
+
 ## Data pipeline
 
 | Step | What it does |
 |------|----------------|
-| `Daycare Providers.csv` | Source extract (columns expected by `build_data.py`). |
-| `build_data.py` | Geocodes addresses via the [U.S. Census Geocoder](https://geocoding.geo.census.gov/), caches in `geocode_cache.json`, writes `providers.json` and mirrors it to `api/v1/providers.json`. |
+| `build_data.py` | Geocodes a normalized CSV via the [U.S. Census Geocoder](https://geocoding.geo.census.gov/), caches in `geocode_cache.json`, writes compact `providers.json` and mirrors it to `api/v1/providers.json`. |
 | `fetch_il_daycare_by_county.py` | Optional: Playwright scrape of the [DCFS Sunshine provider lookup](https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx) by county (slow; respect the site). |
 | `normalize_sunshine_csv.py` | Converts combined Sunshine CSV into `Daycare Providers.csv` format for the build. |
 
@@ -53,7 +60,7 @@ The map tries `/api/v1/providers.json` first, then falls back to `providers.json
 - **Deploy GitHub Pages** (`.github/workflows/pages.yml`): on push to `main`, uploads the static site including `api.html`, `api/v1/*`, `api/openapi.yaml`, `LICENSE`, `assets/`, `providers.json`, and related files.
 - **Data pipeline** (`.github/workflows/data-pipeline.yml`): two jobs:
   1. **Fetch Sunshine CSV** — runs only on manual dispatch when **Run full IL Sunshine scrape** is enabled (Playwright + normalize).
-  2. **Geocode and commit JSON** — always runs after the fetch job finishes or is skipped: installs `requirements.txt`, runs `build_data.py`, commits `providers.json`, `geocode_cache.json`, `api/v1/providers.json`, and `Daycare Providers.csv` when changed.
+  2. **Geocode and commit JSON** — runs after the fetch job: installs `requirements.txt`, runs `build_data.py` when `Daycare Providers.csv` is present (from the fetch artifact), and commits `providers.json`, `geocode_cache.json`, and `api/v1/providers.json`. Source CSVs are not committed; the published dataset is `providers.json`.
 
 Triggers: push to `main` (paths listed in the workflow), weekly schedule, or manual dispatch.
 

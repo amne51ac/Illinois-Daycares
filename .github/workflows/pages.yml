@@ -27,9 +27,10 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html about.html api.html LICENSE CNAME robots.txt sitemap.xml .nojekyll _site/
+          cp index.html about.html api.html privacy.html terms.html LICENSE CNAME robots.txt sitemap.xml .nojekyll _site/
           cp -r assets _site/
           cp providers.json _site/
+          cp export_meta.json _site/
           mkdir -p _site/api/v1
           if [ -f api/v1/providers.json ]; then cp api/v1/providers.json _site/api/v1/providers.json; else cp providers.json _site/api/v1/providers.json; fi
           cp api/v1/provider.schema.json _site/api/v1/provider.schema.json

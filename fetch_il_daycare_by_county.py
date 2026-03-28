@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
-Download Illinois DCFS Sunshine daycare provider search results for every county.
+Download Illinois DCFS Sunshine daycare provider lookup as CSV.
 
-The site is ASP.NET WebForms + DevExpress; reliable automation uses the same
-client-side calls as the page (ASPxCounty.SetText + dcfssearch), then clicks
-**Export** to download the full result set as CSV (equivalent to posting
-ctl00$ContentPlaceHolderContent$ASPxButtonExport=Export with a valid session).
+Default (fast): one search on **ZIP partial match** with "6". Illinois ZIP codes
+are in the 600xx–629xx range, so every licensed site’s ZIP contains the digit 6;
+the site treats this as a partial match and returns the full statewide list in
+one grid + Export.
+
+Optional: ``--by-county`` loops all Wikipedia counties (slow; legacy).
+
+The page uses ASP.NET + DevExpress; we call ASPx* SetText + dcfssearch(), then
+Export (same as ctl00$ContentPlaceHolderContent$ASPxButtonExport in the browser).
 
 Requires: pip install playwright && playwright install chromium
-
-Usage:
-  python3 fetch_il_daycare_by_county.py --counties cook lake --out-dir ./sunshine_out
-  python3 fetch_il_daycare_by_county.py --all --out-dir ./sunshine_out
-
-Respect the site: use modest delays; do not hammer the server.
 """
 
 from __future__ import annotations
@@ -37,7 +36,6 @@ except ImportError:
 LOOKUP_URL = "https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx"
 WIKI_COUNTIES_URL = "https://en.wikipedia.org/wiki/List_of_counties_in_Illinois"
 
-# DevExpress export control (parent wraps the visible button)
 EXPORT_BTN = "#ctl00_ContentPlaceHolderContent_ASPxButtonExport"
 
 
@@ -62,6 +60,21 @@ def fetch_county_names_from_wikipedia() -> list[str]:
     return out
 
 
+def run_search_zip_partial(page, zip_substring: str) -> None:
+    s = (zip_substring or "6").strip()
+    page.evaluate(
+        """(z) => {
+      ASPxProviderName.SetText('');
+      ASPxCity.SetText('');
+      ASPxCounty.SetText('');
+      ASPxZip.SetText(z);
+      dcfssearch();
+    }""",
+        s,
+    )
+    page.wait_for_timeout(8000)
+
+
 def run_search_for_county(page, county_display: str) -> None:
     q = county_display.strip().lower()
     page.evaluate(
@@ -78,14 +91,9 @@ def run_search_for_county(page, county_display: str) -> None:
 
 
 def download_export_csv(page, dest: Path) -> tuple[int, Optional[list[str]], list[list[str]]]:
-    """
-    Click Export; save CSV to dest.
-    Returns (data_row_count, header_cols or None, data_rows).
-    Empty search can yield a 0-byte file.
-    """
     page.locator(EXPORT_BTN).scroll_into_view_if_needed()
     page.wait_for_timeout(400)
-    with page.expect_download(timeout=120000) as dl_info:
+    with page.expect_download(timeout=180000) as dl_info:
         page.locator(EXPORT_BTN).click(force=True)
     download = dl_info.value
     download.save_as(str(dest))
@@ -111,7 +119,6 @@ def append_to_combined(
     header: list[str],
     combined_header_written: list[bool],
 ) -> None:
-    """combined_header_written is a one-element list used as mutable flag."""
     if not header:
         return
     if not combined_header_written[0]:
@@ -121,21 +128,22 @@ def append_to_combined(
         combined_writer.writerow([search_key] + row)
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description="Export IL DCFS daycare provider lookup by county (CSV download).")
-    ap.add_argument(
-        "--counties",
-        nargs="*",
-        help="County names as on the site (e.g. cook lake dupage). Default: all 102 from Wikipedia.",
-    )
-    ap.add_argument("--all", action="store_true", help="Same as omitting --counties: all counties.")
-    ap.add_argument("--out-dir", type=Path, default=Path("sunshine_county_exports"), help="Output directory.")
-    ap.add_argument("--combined-csv", type=str, default="all_counties.csv", help="Combined CSV filename.")
-    ap.add_argument("--delay", type=float, default=1.0, help="Seconds between counties.")
-    ap.add_argument("--headless", action="store_true", default=True)
-    ap.add_argument("--no-headless", action="store_false", dest="headless", help="Show browser window.")
-    args = ap.parse_args()
+def run_zip_export(args, pw_page) -> None:
+    """Single statewide export via ZIP partial match."""
+    out_dir: Path = args.out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dest = out_dir / args.output
 
+    print(f"ZIP partial search: {args.zip_partial!r} → export to {dest} …", flush=True)
+    run_search_zip_partial(pw_page, args.zip_partial)
+    n_data, header, _ = download_export_csv(pw_page, dest)
+    if dest.stat().st_size == 0:
+        print("No data (empty export).", flush=True)
+        sys.exit(1)
+    print(f"Done. {n_data} data row(s) → {dest}", flush=True)
+
+
+def run_county_loop(args, page) -> None:
     if args.counties:
         counties = [c.strip() for c in args.counties if c.strip()]
     else:
@@ -151,6 +159,69 @@ def main() -> None:
 
     stats = {"counties": 0, "rows": 0}
 
+    for display_name in counties:
+        search_key = display_name.lower()
+        slug = re.sub(r"[^a-z0-9]+", "_", search_key).strip("_") or "county"
+        per_path = out_dir / f"{slug}.csv"
+
+        print(f"County: {display_name} ({search_key}) …", flush=True)
+        try:
+            run_search_for_county(page, display_name)
+            n_data, header, data_rows = download_export_csv(page, per_path)
+        except Exception as e:
+            print(f"  error: {e}", flush=True)
+            n_data, header, data_rows = 0, None, []
+
+        stats["counties"] += 1
+        stats["rows"] += n_data
+
+        if per_path.stat().st_size == 0:
+            print("  -> no data (empty export file)", flush=True)
+        elif header:
+            append_to_combined(combined_writer, search_key, data_rows, header, combined_header_written)
+            print(f"  -> {n_data} data row(s) -> {per_path.name}", flush=True)
+        else:
+            print(f"  -> wrote {per_path.name} (could not parse CSV)", flush=True)
+
+        time.sleep(max(0.0, args.delay))
+
+    combined_f.close()
+    print(f"Done. Counties processed: {stats['counties']}, total data rows (combined): {stats['rows']}", flush=True)
+    print(f"Combined: {combined_path}", flush=True)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="Export IL DCFS daycare provider lookup (default: one ZIP partial search for statewide CSV)."
+    )
+    ap.add_argument(
+        "--by-county",
+        action="store_true",
+        help="Scrape every county via Wikipedia list (slow). Default is single ZIP partial search.",
+    )
+    ap.add_argument(
+        "--zip-partial",
+        default="6",
+        help='ZIP field substring (partial match). Default "6" matches IL ZIPs 600xx–629xx.',
+    )
+    ap.add_argument("--out-dir", type=Path, default=Path("sunshine_county_exports"), help="Output directory.")
+    ap.add_argument(
+        "--output",
+        "-o",
+        default="illinois_sunshine_export.csv",
+        help="Output filename for ZIP mode (written under --out-dir).",
+    )
+    ap.add_argument(
+        "--counties",
+        nargs="*",
+        help="With --by-county: county names only (e.g. cook lake). Omit for all 102.",
+    )
+    ap.add_argument("--combined-csv", type=str, default="all_counties.csv", help="--by-county only: combined file name.")
+    ap.add_argument("--delay", type=float, default=1.0, help="--by-county only: seconds between counties.")
+    ap.add_argument("--headless", action="store_true", default=True)
+    ap.add_argument("--no-headless", action="store_false", dest="headless", help="Show browser window.")
+    args = ap.parse_args()
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=args.headless)
         context = browser.new_context(
@@ -159,41 +230,17 @@ def main() -> None:
             viewport={"width": 1400, "height": 2200},
         )
         page = context.new_page()
-        page.set_default_timeout(120000)
+        page.set_default_timeout(180000)
         page.goto(LOOKUP_URL, wait_until="domcontentloaded")
         page.wait_for_timeout(2500)
 
-        for display_name in counties:
-            search_key = display_name.lower()
-            slug = re.sub(r"[^a-z0-9]+", "_", search_key).strip("_") or "county"
-            per_path = out_dir / f"{slug}.csv"
-
-            print(f"County: {display_name} ({search_key}) …", flush=True)
-            try:
-                run_search_for_county(page, display_name)
-                n_data, header, data_rows = download_export_csv(page, per_path)
-            except Exception as e:
-                print(f"  error: {e}", flush=True)
-                n_data, header, data_rows = 0, None, []
-
-            stats["counties"] += 1
-            stats["rows"] += n_data
-
-            if per_path.stat().st_size == 0:
-                print("  -> no data (empty export file)", flush=True)
-            elif header:
-                append_to_combined(combined_writer, search_key, data_rows, header, combined_header_written)
-                print(f"  -> {n_data} data row(s) -> {per_path.name}", flush=True)
+        try:
+            if args.by_county:
+                run_county_loop(args, page)
             else:
-                print(f"  -> wrote {per_path.name} (could not parse CSV)", flush=True)
-
-            time.sleep(max(0.0, args.delay))
-
-        browser.close()
-
-    combined_f.close()
-    print(f"Done. Counties processed: {stats['counties']}, total data rows (combined): {stats['rows']}", flush=True)
-    print(f"Combined: {combined_path}", flush=True)
+                run_zip_export(args, page)
+        finally:
+            browser.close()
 
 
 if __name__ == "__main__":
