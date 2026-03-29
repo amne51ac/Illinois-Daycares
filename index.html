@@ -625,7 +625,7 @@
           "</span>";
         div.addEventListener("click", function (ev) {
           if (ev.target.closest(".card-fav")) return;
-          selectProvider(p.id, false);
+          selectProvider(p.id);
         });
         const favBtn = div.querySelector(".card-fav");
         if (favBtn) {
@@ -668,46 +668,42 @@
         slice.appendChild(frag);
       }
 
-      function selectProvider(id, fromMarker) {
+      function paintCardSelection(pid) {
+        document.querySelectorAll(".card").forEach(function (el) {
+          const on = el.dataset.id === pid;
+          el.classList.toggle("selected", on);
+          el.setAttribute("aria-selected", on ? "true" : "false");
+        });
+      }
+
+      /** List / search UI: scroll, zoom map, open popup. Map pins: Leaflet opens the popup; use popupopen to sync selection. */
+      function selectProvider(id) {
         selectedId = id;
-        function paintSelection() {
-          document.querySelectorAll(".card").forEach(function (el) {
-            const on = el.dataset.id === id;
-            el.classList.toggle("selected", on);
-            el.setAttribute("aria-selected", on ? "true" : "false");
-          });
-        }
-        paintSelection();
+        paintCardSelection(id);
         const m = markersById[id];
         if (!m) return;
         const scrollEl = document.getElementById("list-scroll");
-        if (!fromMarker && scrollEl) {
+        if (scrollEl) {
           const idx = filtered.findIndex(function (p) {
             return p.id === id;
           });
           if (idx >= 0) {
             scrollEl.scrollTop = Math.max(0, idx * LIST_ROW - scrollEl.clientHeight * 0.35);
             layoutVirtualList();
-            paintSelection();
+            paintCardSelection(id);
           }
         }
-        if (!fromMarker) {
-          if (markerLayer && markerLayer.zoomToShowLayer) {
-            markerLayer.zoomToShowLayer(m, function () {
-              map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
-              m.openPopup();
-            });
-          } else {
+        if (markerLayer && markerLayer.zoomToShowLayer) {
+          markerLayer.zoomToShowLayer(m, function () {
             map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
             m.openPopup();
-          }
+          });
         } else {
+          map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate: true });
           m.openPopup();
         }
-        if (!fromMarker) {
-          const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
-          if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
-        }
+        const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
+        if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
 
       function renderList() {
@@ -816,7 +812,7 @@
           const row = ev.target.closest(".favorites-accordion-row");
           if (row) {
             const id = row.getAttribute("data-id");
-            if (id) selectProvider(id, false);
+            if (id) selectProvider(id);
           }
         });
       }
@@ -1177,19 +1173,16 @@
           return;
         }
 
-        function markerPopupContent() {
-          const pr = providerById.get(this._provId);
-          return pr ? popupHtml(pr) : "";
-        }
         function onMarkerPopupOpen() {
           map._popupMarker = this;
+          const pid = this._provId;
+          if (pid) {
+            selectedId = pid;
+            paintCardSelection(pid);
+          }
         }
         function onMarkerPopupClose() {
           if (map._popupMarker === this) map._popupMarker = null;
-        }
-        function onMarkerClick() {
-          const id = this._provId;
-          if (id) selectProvider(id, true);
         }
 
         const scheduleChunk =
@@ -1210,11 +1203,15 @@
             const p = raw[mi];
             const m = L.marker([p.lat, p.lon], { title: p.name });
             m._provId = p.id;
-            /* autoPan triggers map moveend → list rerender → refreshMarkers clears cluster and kills the popup */
-            m.bindPopup(markerPopupContent, { maxWidth: 340, autoPan: false });
+            /* Popup content must close over `p`: Leaflet calls the content fn with a `this` that is not always the marker (e.g. cluster), so providerById.get(this._provId) was empty. */
+            m.bindPopup(
+              function () {
+                return popupHtml(p);
+              },
+              { maxWidth: 340, autoPan: false }
+            );
             m.on("popupopen", onMarkerPopupOpen);
             m.on("popupclose", onMarkerPopupClose);
-            m.on("click", onMarkerClick);
             markersById[p.id] = m;
           }
           if (mi < raw.length) scheduleChunk(pumpMarkers);
