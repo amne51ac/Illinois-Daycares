@@ -28,11 +28,50 @@
   <link rel="apple-touch-icon" href="/assets/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
   <link rel="stylesheet" href="/assets/site.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="" />
+  <!-- Non-blocking fonts + map CSS (reduces render-blocking vs synchronous link) -->
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap"
+    media="print"
+    onload="this.media='all'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600&display=swap"
+  /></noscript>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+    media="print"
+    onload="this.media='all'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+  /></noscript>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    crossorigin=""
+    media="print"
+    onload="this.media='all'"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    crossorigin=""
+    media="print"
+    onload="this.media='all'"
+  />
 </head>
 <body>
   <a class="skip-link" href="#map">Skip to map</a>
@@ -228,9 +267,9 @@
   </footer>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-  <script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+  <script type="module">
     (function () {
       const FT_LABEL = { DCC: "Day care center", DCH: "Day care home", GDC: "Group day care home" };
 
@@ -995,7 +1034,7 @@
         });
       }
 
-      function initMap() {
+      function initMap(onMarkersReady) {
         map = L.map("map", {
           scrollWheelZoom: true,
           /* 0.5 = half-step zoom: smoother than whole integers, far cheaper than zoomSnap:0 (constant tile rescale) */
@@ -1103,36 +1142,58 @@
         userLayer = L.layerGroup();
         map.addLayer(userLayer);
 
-        raw.forEach((p) => {
-          const m = L.marker([p.lat, p.lon], { title: p.name });
-          m._provId = p.id;
-          m.bindPopup(
-            function () {
-              return popupHtml(p);
-            },
-            { maxWidth: 340 }
-          );
-          m.on("popupopen", function () {
-            map._popupMarker = this;
-          });
-          m.on("popupclose", function () {
-            if (map._popupMarker === this) map._popupMarker = null;
-          });
-          m.on("click", function () {
-            selectProvider(p.id, true);
-          });
-          markersById[p.id] = m;
-        });
+        function finishMarkerInit() {
+          updateDistanceControls();
 
-        updateDistanceControls();
+          document.getElementById("fit-bounds").addEventListener("click", fitToVisible);
+          wireLocation();
 
-        document.getElementById("fit-bounds").addEventListener("click", fitToVisible);
-        wireLocation();
+          const listOnMapMove = debounce(function () {
+            if (mapBoundsListEnabled()) renderList();
+          }, 120);
+          map.on("moveend", listOnMapMove);
 
-        const listOnMapMove = debounce(function () {
-          if (mapBoundsListEnabled()) renderList();
-        }, 120);
-        map.on("moveend", listOnMapMove);
+          if (typeof onMarkersReady === "function") onMarkersReady();
+        }
+
+        if (!raw.length) {
+          finishMarkerInit();
+          return;
+        }
+
+        /* Spread ~8k markers across animation frames to cut Total Blocking Time (Lighthouse). */
+        const MARKER_BATCH = 320;
+        let mi = 0;
+        function pumpMarkers() {
+          const end = Math.min(mi + MARKER_BATCH, raw.length);
+          for (; mi < end; mi++) {
+            const p = raw[mi];
+            const m = L.marker([p.lat, p.lon], { title: p.name });
+            m._provId = p.id;
+            m.bindPopup(
+              function () {
+                return popupHtml(p);
+              },
+              { maxWidth: 340 }
+            );
+            m.on("popupopen", function () {
+              map._popupMarker = this;
+            });
+            m.on("popupclose", function () {
+              if (map._popupMarker === this) map._popupMarker = null;
+            });
+            m.on("click", function () {
+              selectProvider(p.id, true);
+            });
+            markersById[p.id] = m;
+          }
+          if (mi < raw.length) {
+            requestAnimationFrame(pumpMarkers);
+          } else {
+            finishMarkerInit();
+          }
+        }
+        pumpMarkers();
       }
 
       function utf8ToB64Url(str) {
@@ -1557,22 +1618,23 @@
             }
           }
           applyHomeSeoFromData(raw.length, exportedAt);
-          document.getElementById("loading").classList.add("hidden");
-          initMap();
-          wireFilters();
-          wireSearchFeatures();
-          wireFavoritesAccordion();
-          const shared = tryParseStateFromUrl();
-          if (shared && shared.state) applySearchState(shared.state);
-          renderSavedSearchesList();
-          if (shared && shared.fromShare) {
-            syncUrlToState();
-            if (getPassingProviders().length) fitToVisible();
-            else fitIllinois();
-          } else {
-            fitIllinois();
-          }
-          renderList();
+          initMap(function () {
+            wireFilters();
+            wireSearchFeatures();
+            wireFavoritesAccordion();
+            const shared = tryParseStateFromUrl();
+            if (shared && shared.state) applySearchState(shared.state);
+            renderSavedSearchesList();
+            if (shared && shared.fromShare) {
+              syncUrlToState();
+              if (getPassingProviders().length) fitToVisible();
+              else fitIllinois();
+            } else {
+              fitIllinois();
+            }
+            renderList();
+            document.getElementById("loading").classList.add("hidden");
+          });
         })
         .catch((e) => {
           document.getElementById("loading").innerHTML =
