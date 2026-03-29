@@ -2,6 +2,7 @@ name: Deploy GitHub Pages
 
 # If Configure Pages fails with "Not Found", Pages is not enabled yet. Fix: Repo Settings → Pages →
 # Build and deployment → Source: GitHub Actions. (One-time per repository.)
+# Custom domain: set under Settings → Pages → Custom domain (see README). The CNAME file copied into _site is optional when using this workflow.
 
 on:
   push:

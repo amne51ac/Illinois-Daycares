@@ -68,7 +68,15 @@ Triggers: push to `main` (paths listed in the workflow), weekly schedule, or man
 
 **Repository settings for Pages:** *Settings → Pages → Build and deployment → Source: GitHub Actions*.
 
-**Custom domain:** `CNAME` contains `illinoisdaycares.com`. In the same Pages settings, set the custom domain and enable HTTPS. At your DNS host, add a **CNAME** from `illinoisdaycares.com` (or `www`) to `<your-user>.github.io` per [GitHub’s docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site).
+**Custom domain (`illinoisdaycares.com`):** With **GitHub Actions** as the publisher, the live `CNAME` file in `_site` is optional; GitHub reads the hostname from **repository Settings → Pages → Custom domain**.
+
+1. **GitHub (do this first):** [Pages settings](https://github.com/amne51ac/Illinois-Daycares/settings/pages) → **Custom domain** → enter `illinoisdaycares.com` → **Save**. This starts DNS checks and TLS provisioning.
+2. **DNS at your registrar** (for a **project** site `amne51ac.github.io/Illinois-Daycares`, records are still pointed at GitHub’s edge, not the repo path):
+   - **Apex** `@` / `illinoisdaycares.com`: add **four A records** to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`, and optionally **four AAAA** to `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153` ([docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site#configuring-an-apex-domain)).
+   - **`www`:** CNAME **`www`** → **`amne51ac.github.io`** (hostname only—no `/Illinois-Daycares`). GitHub will redirect between apex and `www` depending on which you set as the primary custom domain.
+3. Wait for the Pages UI to show a green check on the domain (propagation can take up to ~24 hours), then enable **Enforce HTTPS** on the same page.
+
+Optional: [Verify the domain](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/verifying-your-custom-domain-for-github-pages) at the account/org level to lock it to your repos.
 
 ## Branding & SEO
 
