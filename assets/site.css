@@ -180,11 +180,24 @@ body:has(> main.prose) > .site-footer {
   flex-shrink: 0;
 }
 
+/* Home map page: landmark wrapper (Lighthouse / a11y) */
+.app-main {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.app-main > .app {
+  flex: 1 1 0;
+  min-height: 0;
+}
 .app {
   display: grid;
   grid-template-columns: minmax(min(100%, 300px), 400px) minmax(0, 1fr);
-  flex: 1 1 0;
-  min-height: 0;
   width: 100%;
   max-width: 100%;
   min-width: 0;

@@ -30,6 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
   <link rel="dns-prefetch" href="https://tile.openstreetmap.org" />
+  <link rel="preload" href="/api/v1/providers.json" as="fetch" crossorigin="anonymous" />
   <link rel="stylesheet" href="/assets/site.css" />
   <!-- Non-blocking fonts + map CSS (reduces render-blocking vs synchronous link) -->
   <link
@@ -74,7 +75,7 @@
   />
 </head>
 <body>
-  <a class="skip-link" href="#map">Skip to map</a>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="site-header">
     <a class="brand" href="/" aria-label="IllinoisDaycares.com home">
       <img src="/assets/logo.svg" width="248" height="36" alt="" />
@@ -93,6 +94,7 @@
     <div class="spinner" aria-hidden="true"></div>
     <p>Loading providers…</p>
   </div>
+  <main id="main-content" class="app-main">
   <div class="app">
     <aside class="sidebar">
       <div class="intro" id="map-intro" aria-live="polite">
@@ -254,8 +256,9 @@
         </div>
       </div>
     </aside>
-    <main id="map" role="application" aria-label="Map of daycare providers"></main>
+    <div id="map" role="application" aria-label="Map of daycare providers"></div>
   </div>
+  </main>
   <footer class="site-footer" role="contentinfo">
     <p class="site-footer-line">
       <span class="site-footer-legal">
@@ -701,8 +704,10 @@
         } else {
           m.openPopup();
         }
-        const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
-        if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        if (!fromMarker) {
+          const card = document.querySelector('.card[data-id="' + CSS.escape(id) + '"]');
+          if (card) card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
       }
 
       function renderList() {
@@ -819,6 +824,9 @@
       function refreshMarkers() {
         if (!markerLayer) return;
         const visible = new Set(filtered.map((p) => p.id));
+        let reopenId = null;
+        const pm = map && map._popupMarker;
+        if (pm && pm._provId) reopenId = pm._provId;
         markerLayer.clearLayers();
         filtered.forEach(function (p) {
           const m = markersById[p.id];
@@ -827,6 +835,12 @@
         if (selectedId && !visible.has(selectedId)) {
           selectedId = null;
           document.querySelectorAll(".card.selected").forEach((el) => el.classList.remove("selected"));
+        }
+        if (reopenId && visible.has(reopenId) && markersById[reopenId]) {
+          const mk = markersById[reopenId];
+          requestAnimationFrame(function () {
+            if (markerLayer && markersById[reopenId] === mk) mk.openPopup();
+          });
         }
       }
 
@@ -1047,82 +1061,84 @@
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 19,
         });
-        const voyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-          subdomains: "abcd",
-          maxZoom: 20,
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        });
-        const positron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-          subdomains: "abcd",
-          maxZoom: 20,
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        });
-        const darkMatter = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-          subdomains: "abcd",
-          maxZoom: 20,
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        });
-        const natGeo = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
-          {
-            maxZoom: 16,
-            attribution:
-              "Tiles &copy; Esri &mdash; Source: National Geographic, Esri, Garmin, HERE, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, increment P Corp.",
-          }
-        );
-        const worldTopo = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-          {
-            maxZoom: 19,
-            attribution: "Tiles &copy; Esri &mdash; Source: Esri, HERE, Garmin, FAO, NOAA, USGS, EPA, NPS, USGS, USDA",
-          }
-        );
-        const openTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-          subdomains: "abc",
-          maxZoom: 17,
-          attribution:
-            'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-        });
-        const esriSat = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          {
-            maxZoom: 19,
-            attribution:
-              "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-          }
-        );
-        const esriTransport = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-          {
-            maxZoom: 19,
-            attribution: "Transportation overlay &copy; Esri",
-          }
-        );
-        const esriLabels = L.tileLayer(
-          "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-          {
-            maxZoom: 19,
-            attribution: "Labels &copy; Esri",
-          }
-        );
-        const hybrid = L.layerGroup([esriSat, esriTransport, esriLabels]);
-
-        const baseLayers = {
-          "OpenStreetMap": osm,
-          "Voyager (CARTO)": voyager,
-          "Light (CARTO)": positron,
-          "Dark (CARTO)": darkMatter,
-          "National Geographic (Esri)": natGeo,
-          "World Topo (Esri)": worldTopo,
-          "OpenTopoMap (terrain)": openTopo,
-          "Satellite (Esri)": esriSat,
-          "Satellite + streets (Esri)": hybrid,
-        };
         osm.addTo(map);
-        L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+        const layerPicker = L.control.layers({ "OpenStreetMap": osm }, null, { collapsed: true }).addTo(map);
+        /* Defer other basemaps to shorten the critical main-thread slice (Lighthouse TBT). */
+        function registerExtraBasemaps() {
+          if (registerExtraBasemaps.done) return;
+          registerExtraBasemaps.done = true;
+          const voyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+            subdomains: "abcd",
+            maxZoom: 20,
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          });
+          const positron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+            subdomains: "abcd",
+            maxZoom: 20,
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          });
+          const darkMatter = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+            subdomains: "abcd",
+            maxZoom: 20,
+            attribution:
+              '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          });
+          const natGeo = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 16,
+              attribution:
+                "Tiles &copy; Esri &mdash; Source: National Geographic, Esri, Garmin, HERE, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, increment P Corp.",
+            }
+          );
+          const worldTopo = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 19,
+              attribution: "Tiles &copy; Esri &mdash; Source: Esri, HERE, Garmin, FAO, NOAA, USGS, EPA, NPS, USGS, USDA",
+            }
+          );
+          const openTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+            subdomains: "abc",
+            maxZoom: 17,
+            attribution:
+              'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+          });
+          const esriSat = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 19,
+              attribution:
+                "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+            }
+          );
+          const esriTransport = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 19,
+              attribution: "Transportation overlay &copy; Esri",
+            }
+          );
+          const esriLabels = L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+            {
+              maxZoom: 19,
+              attribution: "Labels &copy; Esri",
+            }
+          );
+          const hybrid = L.layerGroup([esriSat, esriTransport, esriLabels]);
+          layerPicker.addBaseLayer(voyager, "Voyager (CARTO)");
+          layerPicker.addBaseLayer(positron, "Light (CARTO)");
+          layerPicker.addBaseLayer(darkMatter, "Dark (CARTO)");
+          layerPicker.addBaseLayer(natGeo, "National Geographic (Esri)");
+          layerPicker.addBaseLayer(worldTopo, "World Topo (Esri)");
+          layerPicker.addBaseLayer(openTopo, "OpenTopoMap (terrain)");
+          layerPicker.addBaseLayer(esriSat, "Satellite (Esri)");
+          layerPicker.addBaseLayer(hybrid, "Satellite + streets (Esri)");
+        }
+        setTimeout(registerExtraBasemaps, 0);
 
         if (typeof L.markerClusterGroup === "function") {
           markerLayer = L.markerClusterGroup({
@@ -1161,8 +1177,32 @@
           return;
         }
 
-        /* Spread ~8k markers across animation frames to cut Total Blocking Time (Lighthouse). */
-        const MARKER_BATCH = 320;
+        function markerPopupContent() {
+          const pr = providerById.get(this._provId);
+          return pr ? popupHtml(pr) : "";
+        }
+        function onMarkerPopupOpen() {
+          map._popupMarker = this;
+        }
+        function onMarkerPopupClose() {
+          if (map._popupMarker === this) map._popupMarker = null;
+        }
+        function onMarkerClick() {
+          const id = this._provId;
+          if (id) selectProvider(id, true);
+        }
+
+        const scheduleChunk =
+          typeof requestIdleCallback === "function"
+            ? function (cb) {
+                requestIdleCallback(cb, { timeout: 220 });
+              }
+            : function (cb) {
+                setTimeout(cb, 1);
+              };
+
+        /* requestIdleCallback + small batches → lower Total Blocking Time than rAF alone. */
+        const MARKER_BATCH = 100;
         let mi = 0;
         function pumpMarkers() {
           const end = Math.min(mi + MARKER_BATCH, raw.length);
@@ -1170,28 +1210,15 @@
             const p = raw[mi];
             const m = L.marker([p.lat, p.lon], { title: p.name });
             m._provId = p.id;
-            m.bindPopup(
-              function () {
-                return popupHtml(p);
-              },
-              { maxWidth: 340 }
-            );
-            m.on("popupopen", function () {
-              map._popupMarker = this;
-            });
-            m.on("popupclose", function () {
-              if (map._popupMarker === this) map._popupMarker = null;
-            });
-            m.on("click", function () {
-              selectProvider(p.id, true);
-            });
+            /* autoPan triggers map moveend → list rerender → refreshMarkers clears cluster and kills the popup */
+            m.bindPopup(markerPopupContent, { maxWidth: 340, autoPan: false });
+            m.on("popupopen", onMarkerPopupOpen);
+            m.on("popupclose", onMarkerPopupClose);
+            m.on("click", onMarkerClick);
             markersById[p.id] = m;
           }
-          if (mi < raw.length) {
-            requestAnimationFrame(pumpMarkers);
-          } else {
-            finishMarkerInit();
-          }
+          if (mi < raw.length) scheduleChunk(pumpMarkers);
+          else finishMarkerInit();
         }
         pumpMarkers();
       }
@@ -1595,46 +1622,61 @@
           const meta = bundle.meta;
           loadFavoritesFromStorage();
           raw = data;
-          providerById = new Map(
-            raw.map(function (p) {
-              return [p.id, p];
-            })
-          );
-          raw.forEach(function (p) {
-            p._q = (p.name + " " + p.street + " " + p.zip + " " + p.phone + " " + p.id).toLowerCase();
-          });
-          const ic = document.getElementById("intro-count");
-          if (ic) ic.textContent = raw.length.toLocaleString();
-          const timeEl = document.getElementById("intro-export-date");
-          const exportedAt = meta.exportedAt;
-          if (timeEl) {
-            const dateStr = formatExportDateUS(exportedAt);
-            if (dateStr && exportedAt) {
-              timeEl.textContent = dateStr;
-              timeEl.setAttribute("datetime", exportedAt);
-            } else {
-              timeEl.textContent = "a recent Sunshine export";
-              timeEl.removeAttribute("datetime");
+          providerById = new Map();
+          const scheduleIndexChunk =
+            typeof requestIdleCallback === "function"
+              ? function (cb) {
+                  requestIdleCallback(cb, { timeout: 150 });
+                }
+              : function (cb) {
+                  setTimeout(cb, 1);
+                };
+          let si = 0;
+          const INDEX_BATCH = 450;
+          function pumpSearchIndex() {
+            const end = Math.min(si + INDEX_BATCH, raw.length);
+            for (; si < end; si++) {
+              const p = raw[si];
+              p._q = (p.name + " " + p.street + " " + p.zip + " " + p.phone + " " + p.id).toLowerCase();
+              providerById.set(p.id, p);
+            }
+            if (si < raw.length) scheduleIndexChunk(pumpSearchIndex);
+            else {
+              const ic = document.getElementById("intro-count");
+              if (ic) ic.textContent = raw.length.toLocaleString();
+              const timeEl = document.getElementById("intro-export-date");
+              const exportedAt = meta.exportedAt;
+              if (timeEl) {
+                const dateStr = formatExportDateUS(exportedAt);
+                if (dateStr && exportedAt) {
+                  timeEl.textContent = dateStr;
+                  timeEl.setAttribute("datetime", exportedAt);
+                } else {
+                  timeEl.textContent = "a recent Sunshine export";
+                  timeEl.removeAttribute("datetime");
+                }
+              }
+              applyHomeSeoFromData(raw.length, exportedAt);
+              initMap(function () {
+                wireFilters();
+                wireSearchFeatures();
+                wireFavoritesAccordion();
+                const shared = tryParseStateFromUrl();
+                if (shared && shared.state) applySearchState(shared.state);
+                renderSavedSearchesList();
+                if (shared && shared.fromShare) {
+                  syncUrlToState();
+                  if (getPassingProviders().length) fitToVisible();
+                  else fitIllinois();
+                } else {
+                  fitIllinois();
+                }
+                renderList();
+                document.getElementById("loading").classList.add("hidden");
+              });
             }
           }
-          applyHomeSeoFromData(raw.length, exportedAt);
-          initMap(function () {
-            wireFilters();
-            wireSearchFeatures();
-            wireFavoritesAccordion();
-            const shared = tryParseStateFromUrl();
-            if (shared && shared.state) applySearchState(shared.state);
-            renderSavedSearchesList();
-            if (shared && shared.fromShare) {
-              syncUrlToState();
-              if (getPassingProviders().length) fitToVisible();
-              else fitIllinois();
-            } else {
-              fitIllinois();
-            }
-            renderList();
-            document.getElementById("loading").classList.add("hidden");
-          });
+          pumpSearchIndex();
         })
         .catch((e) => {
           document.getElementById("loading").innerHTML =
