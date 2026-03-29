@@ -258,12 +258,12 @@ body:has(> main.prose) > .site-footer {
   .app {
     grid-template-columns: 1fr;
     /* Was 45vh: with intro + filters + meta + favorites, almost no list showed without scrolling. */
-    grid-template-rows: minmax(0, min(58dvh, 560px)) minmax(0, 1fr);
+    grid-template-rows: minmax(0, min(64dvh, 600px)) minmax(0, 1fr);
     overflow: hidden;
   }
   /* One scroll for intro + filters + meta + list; avoids nested scroll + map eating touches below */
   .sidebar {
-    max-height: min(58dvh, 560px);
+    max-height: min(64dvh, 600px);
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -281,7 +281,7 @@ body:has(> main.prose) > .site-footer {
     flex: 0 0 auto;
     overflow: visible;
     /* Don’t let the virtual-list column collapse to zero in tight flex layouts */
-    min-height: min(200px, 28dvh);
+    min-height: min(220px, 32dvh);
     flex-shrink: 0;
   }
   /* Tighter intro on small screens so the provider list appears sooner while scrolling */
@@ -298,13 +298,6 @@ body:has(> main.prose) > .site-footer {
   }
   .sidebar .intro .sub + .sub {
     margin-top: 0.45rem;
-  }
-  .intro-welcome-p:not(.intro-welcome--expanded) .intro-welcome-tail {
-    display: none;
-  }
-  .intro-welcome-toggle {
-    display: inline;
-    margin-left: 0.2rem;
   }
   #map {
     z-index: 1;
@@ -382,6 +375,26 @@ body:has(> main.prose) > .site-footer {
   cursor: pointer;
   vertical-align: baseline;
   white-space: nowrap;
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* JS sets html.intro-narrow from innerWidth so collapse matches Brave iOS / dynamic viewports. */
+html.intro-narrow .intro-welcome-p:not(.intro-welcome--expanded) .intro-welcome-tail {
+  display: none !important;
+}
+html.intro-narrow .intro-welcome-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  min-height: 44px;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
 }
 .intro-welcome-toggle:focus-visible {
   outline: 2px solid var(--accent);
@@ -392,7 +405,7 @@ body:has(> main.prose) > .site-footer {
   .intro-welcome-tail {
     display: inline !important;
   }
-  .intro-welcome-toggle {
+  html:not(.intro-narrow) .intro-welcome-toggle {
     display: none !important;
   }
 }
