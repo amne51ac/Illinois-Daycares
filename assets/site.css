@@ -269,14 +269,23 @@ body:has(> main.prose) > .site-footer {
     line-height: 1.25;
   }
   .app {
-    grid-template-columns: 1fr;
-    /* Was 45vh: with intro + filters + meta + favorites, almost no list showed without scrolling. */
-    grid-template-rows: minmax(0, min(64dvh, 600px)) minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
     overflow: hidden;
   }
-  /* One scroll for intro + filters + meta + list; avoids nested scroll + map eating touches below */
+  /* Collapsed: compact chrome + full-height map. Expanded (body.mobile-list-open): full-height list, map hidden. */
+  body:not(.mobile-list-open) .sidebar {
+    flex: 0 1 auto;
+    max-height: min(46dvh, 520px);
+  }
+  body.mobile-list-open .sidebar {
+    flex: 1 1 0;
+    max-height: none;
+    min-height: 0;
+  }
   .sidebar {
-    max-height: min(64dvh, 600px);
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -286,16 +295,53 @@ body:has(> main.prose) > .site-footer {
     position: relative;
     z-index: 1002;
   }
+  #map {
+    flex: 1 1 0;
+    min-height: min(180px, 28dvh);
+    z-index: 1;
+  }
+  body.mobile-list-open #map {
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden;
+    pointer-events: none;
+    border: none;
+  }
   .filters-wrap[open] .filters {
     max-height: none;
     overflow: visible;
   }
-  .list-wrap {
-    flex: 0 0 auto;
-    overflow: visible;
-    /* Don’t let the virtual-list column collapse to zero in tight flex layouts */
-    min-height: min(220px, 32dvh);
+  .mobile-list-drawer {
     flex-shrink: 0;
+  }
+  .mobile-list-drawer[open] {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .mobile-list-drawer[open] > summary {
+    flex-shrink: 0;
+  }
+  .mobile-list-drawer[open] .list-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-list-drawer:not([open]) .list-wrap {
+    /* content hidden by <details> */
+    min-height: 0;
+  }
+  body:not(.mobile-list-open) .list-wrap {
+    flex: 0 0 auto;
+    min-height: 0;
   }
   /* Tighter intro on small screens so the provider list appears sooner while scrolling */
   .sidebar .intro {
@@ -311,9 +357,6 @@ body:has(> main.prose) > .site-footer {
   }
   .sidebar .intro .sub + .sub {
     margin-top: 0.45rem;
-  }
-  #map {
-    z-index: 1;
   }
 }
 .sidebar {
@@ -332,6 +375,21 @@ body:has(> main.prose) > .site-footer {
   .sidebar {
     overflow-y: hidden;
     z-index: 500;
+  }
+  .mobile-list-drawer {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-bottom: none;
+  }
+  .mobile-list-drawer > summary {
+    display: none !important;
+  }
+  .mobile-list-drawer .list-wrap {
+    flex: 1 1 0;
+    min-height: 0;
   }
   .filters-wrap[open] .filters {
     max-height: min(46vh, 380px);
@@ -736,14 +794,18 @@ label.sort-dist.sort-off { opacity: 0.45; }
   color: var(--muted);
 }
 #map {
-  height: 100%;
-  min-height: 200px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   background: #1c252e;
   position: relative;
   overflow: hidden;
+}
+@media (min-width: 901px) {
+  #map {
+    height: 100%;
+    min-height: 200px;
+  }
 }
 .leaflet-container {
   max-width: 100% !important;

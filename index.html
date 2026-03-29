@@ -210,10 +210,6 @@
             <div class="checks">
               <label class="inline"><input type="checkbox" id="night-only" /> Night capacity &gt; 0</label>
               <label class="inline"><input type="checkbox" id="fav-only" /> Favorites only</label>
-              <label class="inline"
-                ><input type="checkbox" id="map-bounds-list" checked /> List matches map view (pan/zoom updates the
-                list)</label
-              >
             </div>
           </div>
           <fieldset class="filter-fieldset">
@@ -250,11 +246,37 @@
           <ul class="favorites-accordion-list" id="favorites-accordion-list" hidden></ul>
         </div>
       </details>
-      <div class="list-wrap" id="list-scroll">
-        <div class="list vlist" id="list" role="listbox" aria-label="Providers">
-          <div id="list-inner" class="list-inner"></div>
+      <details class="filters-wrap mobile-list-drawer" id="mobile-list-drawer">
+        <summary class="mobile-list-drawer-summary">Provider list</summary>
+        <div class="list-wrap" id="list-scroll">
+          <div class="list vlist" id="list" role="listbox" aria-label="Providers">
+            <div id="list-inner" class="list-inner"></div>
+          </div>
         </div>
-      </div>
+      </details>
+      <script>
+        (function () {
+          var d = document.getElementById("mobile-list-drawer");
+          if (!d) return;
+          function wide() {
+            return window.innerWidth > 900;
+          }
+          function bodyCls() {
+            document.body.classList.toggle("mobile-list-open", !wide() && d.open);
+          }
+          function sync() {
+            if (wide()) d.setAttribute("open", "");
+            else d.removeAttribute("open");
+            bodyCls();
+          }
+          sync();
+          d.addEventListener("toggle", bodyCls);
+          window.addEventListener("resize", function () {
+            clearTimeout(sync._t);
+            sync._t = setTimeout(sync, 200);
+          });
+        })();
+      </script>
     </aside>
     <div id="map" role="application" aria-label="Map of daycare providers"></div>
   </div>
@@ -488,23 +510,6 @@
         return raw.filter(passesFilters);
       }
 
-      function mapBoundsListEnabled() {
-        const el = document.getElementById("map-bounds-list");
-        return !!(el && el.checked);
-      }
-
-      function applyMapBoundsToPassing(passing) {
-        if (!mapBoundsListEnabled() || !map) return passing;
-        try {
-          const b = map.getBounds();
-          return passing.filter(function (p) {
-            return b.contains(L.latLng(p.lat, p.lon));
-          });
-        } catch (e) {
-          return passing;
-        }
-      }
-
       function popupHtml(p) {
         const phone = formatPhone(p.phone);
         const tel = String(p.phone).replace(/\D/g, "");
@@ -708,7 +713,7 @@
 
       function renderList() {
         const sortKey = getSortValue();
-        const passing = applyMapBoundsToPassing(getPassingProviders());
+        const passing = getPassingProviders();
         const filterSig = signatureForPassing(passing);
         filtered = sortData(passing, sortKey);
         document.getElementById("count").textContent = filtered.length + " shown";
@@ -1044,6 +1049,21 @@
         });
       }
 
+      function wireMobileListDrawer() {
+        const drawer = document.getElementById("mobile-list-drawer");
+        if (!drawer || drawer.dataset.mapWired === "1") return;
+        drawer.dataset.mapWired = "1";
+        drawer.addEventListener("toggle", function () {
+          if (!map || window.innerWidth > 900) return;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              map.invalidateSize();
+              renderList();
+            });
+          });
+        });
+      }
+
       function initMap(onMarkersReady) {
         map = L.map("map", {
           scrollWheelZoom: true,
@@ -1160,10 +1180,7 @@
           document.getElementById("fit-bounds").addEventListener("click", fitToVisible);
           wireLocation();
 
-          const listOnMapMove = debounce(function () {
-            if (mapBoundsListEnabled()) renderList();
-          }, 120);
-          map.on("moveend", listOnMapMove);
+          wireMobileListDrawer();
 
           if (typeof onMarkersReady === "function") onMarkersReady();
         }
@@ -1274,7 +1291,6 @@
           so: getSortValue(),
           n: document.getElementById("night-only").checked,
           F: document.getElementById("fav-only").checked,
-          B: document.getElementById("map-bounds-list").checked,
           r: !!userPoint && document.getElementById("show-rings").checked,
           m: document.getElementById("max-dist").value || "",
           a: document.getElementById("user-address").value || "",
@@ -1298,7 +1314,6 @@
           st.so === "name-asc" &&
           !st.n &&
           !st.F &&
-          st.B !== false &&
           !st.r &&
           !st.m &&
           !st.a &&
@@ -1365,7 +1380,6 @@
           so: p.get("sort") || "name-asc",
           n: p.get("night") === "1",
           F: p.get("fav") === "1",
-          B: p.get("mb") === "0" ? false : undefined,
           r: p.get("rings") === "1",
           m: p.get("md") || "",
           a: p.get("addr") || "",
@@ -1390,7 +1404,6 @@
           p.has("sort") ||
           p.has("night") ||
           p.has("fav") ||
-          p.has("mb") ||
           p.has("lat") ||
           p.has("md") ||
           p.has("rings") ||
@@ -1417,7 +1430,6 @@
         let so = st.so && typeof st.so === "string" ? st.so : "name-asc";
         document.getElementById("night-only").checked = !!st.n;
         document.getElementById("fav-only").checked = !!st.F;
-        document.getElementById("map-bounds-list").checked = st.B !== false;
         document.getElementById("user-address").value = typeof st.a === "string" ? st.a : "";
         document.getElementById("max-dist").value = st.m != null && st.m !== "" ? String(st.m) : "";
         if (st.u && typeof st.u[0] === "number" && typeof st.u[1] === "number" && !isNaN(st.u[0]) && !isNaN(st.u[1])) {
@@ -1584,7 +1596,6 @@
         document.querySelectorAll("#ftype-filters input").forEach((el) => el.addEventListener("change", rerender));
         document.getElementById("night-only").addEventListener("change", rerender);
         document.getElementById("fav-only").addEventListener("change", rerender);
-        document.getElementById("map-bounds-list").addEventListener("change", rerender);
         document.querySelectorAll('#status-filters input').forEach((el) => el.addEventListener("change", rerender));
       }
 
