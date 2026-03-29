@@ -10,12 +10,16 @@
   <meta property="og:url" content="https://illinoisdaycares.com/" />
   <meta property="og:title" content="IllinoisDaycares.com — Searchable Illinois daycare map" />
   <meta property="og:description" content="Searchable, filterable, shareable map of licensed Illinois daycare providers from DCFS Sunshine data. Built to find care in our neighborhood—we hope it helps you too." />
-  <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <meta property="og:image" content="https://illinoisdaycares.com/assets/og-image-social.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="669" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:alt" content="IllinoisDaycares.com — searchable map of licensed Illinois daycare providers" />
   <meta property="og:site_name" content="IllinoisDaycares.com" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IllinoisDaycares.com — Searchable Illinois daycare map" />
   <meta name="twitter:description" content="Searchable, filterable, shareable map of licensed Illinois daycare providers from DCFS Sunshine data. Built to find care in our neighborhood—we hope it helps you too." />
-  <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image.png" />
+  <meta name="twitter:image" content="https://illinoisdaycares.com/assets/og-image-social.jpg" />
   <meta name="theme-color" content="#0f1419" />
   <script type="application/ld+json" id="ld-json-home">
   {"@context":"https://schema.org","@type":"WebSite","name":"IllinoisDaycares.com","url":"https://illinoisdaycares.com/","description":"Searchable, filterable, shareable map of licensed Illinois daycare providers from Illinois DCFS Sunshine licensing data."}
@@ -54,16 +58,48 @@
     <aside class="sidebar">
       <div class="intro" id="map-intro" aria-live="polite">
         <h1>Illinois daycare providers</h1>
-        <p class="sub">
-          A searchable, filterable, shareable map of all <strong id="intro-count">—</strong> licensed daycare providers in
-          Illinois as of <time id="intro-export-date">&hellip;</time>, from the
-          <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx">DCFS Sunshine provider lookup</a>.
-        </p>
-        <p class="sub">
-          I made this to make it easier for my wife and I to find daycares in our neighborhood, and I hope you find it
-          useful as well!
+        <p class="sub intro-welcome-p" id="intro-welcome-p">
+          <span class="intro-welcome-core"
+            >A searchable, filterable, shareable map of all <strong id="intro-count">—</strong> licensed daycare
+            providers in Illinois as of <time id="intro-export-date">&hellip;</time>, from the
+            <a href="https://sunshine.dcfs.illinois.gov/Content/Licensing/Daycare/ProviderLookup.aspx"
+              >DCFS Sunshine provider lookup</a
+            >.</span
+          ><span class="intro-welcome-tail" id="intro-welcome-tail"
+            > I made this to make it easier for my wife and I to find daycares in our neighborhood, and I hope you find
+            it useful as well!</span
+          >
+          <button type="button" class="intro-welcome-toggle" id="intro-welcome-toggle" aria-expanded="false" aria-controls="intro-welcome-tail">
+            More
+          </button>
         </p>
       </div>
+      <script>
+        (function () {
+          var p = document.getElementById("intro-welcome-p");
+          var btn = document.getElementById("intro-welcome-toggle");
+          if (!p || !btn) return;
+          var mq = window.matchMedia("(max-width: 900px)");
+          function sync() {
+            if (!mq.matches) {
+              p.classList.remove("intro-welcome--expanded");
+              btn.setAttribute("aria-expanded", "false");
+              btn.textContent = "More";
+              return;
+            }
+            var exp = p.classList.contains("intro-welcome--expanded");
+            btn.textContent = exp ? "Less" : "More";
+            btn.setAttribute("aria-expanded", exp ? "true" : "false");
+          }
+          btn.addEventListener("click", function () {
+            if (!mq.matches) return;
+            p.classList.toggle("intro-welcome--expanded");
+            sync();
+          });
+          mq.addEventListener("change", sync);
+          sync();
+        })();
+      </script>
       <details class="filters-wrap" id="filters-panel">
         <summary>Filters &amp; search</summary>
         <div class="filters">

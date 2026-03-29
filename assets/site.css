@@ -70,8 +70,7 @@ a:hover { text-decoration: underline; }
   font-size: 1.05rem;
   letter-spacing: -0.02em;
   min-width: 0;
-  /* Let nav wrap to a second row before squashing the wordmark */
-  flex-shrink: 0;
+  flex-shrink: 1;
 }
 .site-header .brand:hover { text-decoration: none; opacity: 0.92; }
 .site-header .brand img {
@@ -198,24 +197,39 @@ body:has(> main.prose) > .site-footer {
 }
 @media (max-width: 900px) {
   .site-header {
-    flex-wrap: wrap;
-    padding: 0.5rem 0.65rem;
-    row-gap: 0.45rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem 0.45rem;
+    padding: 0.45rem max(0.5rem, env(safe-area-inset-left)) 0.45rem max(0.5rem, env(safe-area-inset-right));
+    min-width: 0;
+  }
+  .site-header .brand {
+    min-width: 0;
   }
   .site-header .brand img {
-    height: 30px;
-    max-width: min(220px, calc(100vw - 2.5rem));
+    height: 28px;
+    max-width: min(200px, calc(100vw - 11rem));
   }
   .site-nav {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     flex: 1 1 auto;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    gap: 0.15rem 0.2rem;
-    max-width: 100%;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.08rem;
+    min-width: 0;
+    max-width: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .site-nav::-webkit-scrollbar {
+    display: none;
   }
   .site-nav a {
-    padding: 0.28rem 0.42rem;
+    padding: 0.26rem 0.34rem;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .site-nav a.nav-github {
     position: relative;
@@ -243,12 +257,13 @@ body:has(> main.prose) > .site-footer {
   }
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, min(45vh, 50dvh)) minmax(0, 1fr);
+    /* Was 45vh: with intro + filters + meta + favorites, almost no list showed without scrolling. */
+    grid-template-rows: minmax(0, min(58dvh, 560px)) minmax(0, 1fr);
     overflow: hidden;
   }
   /* One scroll for intro + filters + meta + list; avoids nested scroll + map eating touches below */
   .sidebar {
-    max-height: min(45vh, 50dvh);
+    max-height: min(58dvh, 560px);
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -265,7 +280,31 @@ body:has(> main.prose) > .site-footer {
   .list-wrap {
     flex: 0 0 auto;
     overflow: visible;
-    min-height: 0;
+    /* Don’t let the virtual-list column collapse to zero in tight flex layouts */
+    min-height: min(200px, 28dvh);
+    flex-shrink: 0;
+  }
+  /* Tighter intro on small screens so the provider list appears sooner while scrolling */
+  .sidebar .intro {
+    padding: 0.65rem 1rem 0.45rem;
+  }
+  .sidebar .intro h1 {
+    font-size: 1.08rem;
+    margin-bottom: 0.28rem;
+  }
+  .sidebar .intro .sub {
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+  .sidebar .intro .sub + .sub {
+    margin-top: 0.45rem;
+  }
+  .intro-welcome-p:not(.intro-welcome--expanded) .intro-welcome-tail {
+    display: none;
+  }
+  .intro-welcome-toggle {
+    display: inline;
+    margin-left: 0.2rem;
   }
   #map {
     z-index: 1;
@@ -281,6 +320,9 @@ body:has(> main.prose) > .site-footer {
 }
 
 @media (min-width: 901px) {
+  .site-header .brand {
+    flex-shrink: 0;
+  }
   .sidebar {
     overflow-y: hidden;
     z-index: 500;
@@ -315,6 +357,44 @@ body:has(> main.prose) > .site-footer {
 .sidebar .intro time {
   font-weight: 500;
   color: var(--text);
+}
+
+/* Welcome: one paragraph; narrow screens hide tail + inline More; Less sits after full text */
+.intro-welcome-p {
+  margin: 0;
+}
+.intro-welcome-tail {
+  display: inline;
+}
+.intro-welcome-toggle {
+  display: none;
+  font: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  cursor: pointer;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+.intro-welcome-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+@media (min-width: 901px) {
+  .intro-welcome-tail {
+    display: inline !important;
+  }
+  .intro-welcome-toggle {
+    display: none !important;
+  }
 }
 
 .filters-wrap {

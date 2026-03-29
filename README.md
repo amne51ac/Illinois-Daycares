@@ -82,7 +82,7 @@ Optional: [Verify the domain](https://docs.github.com/en/pages/configuring-a-cus
 
 - Shared styles: `assets/site.css`
 - Logo / favicon: `assets/logo.svg`, `assets/favicon.svg`
-- Social preview: `assets/og-image.png` (referenced in `index.html` / `about.html` meta tags)
+- Social preview: `assets/og-image-social.jpg` in meta tags (~1200×669 JPEG for link unfurlers); `og-image.png` is the higher-res source asset
 - `robots.txt` and `sitemap.xml` use the production URL `https://illinoisdaycares.com/`
 
 ## Disclaimer
