@@ -1,5 +1,8 @@
 name: Deploy GitHub Pages
 
+# If Configure Pages fails with "Not Found", Pages is not enabled yet. Fix: Repo Settings → Pages →
+# Build and deployment → Source: GitHub Actions. (One-time per repository.)
+
 on:
   push:
     branches: [main]
